@@ -18,7 +18,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="style2.css?v=1" />
+<link rel="stylesheet" href="style3.css?v=1" />
 </head>
 <body>
 <div id="loadingScreen">
@@ -52,10 +52,6 @@
         <div class="user-meta">
           <span class="user-name" id="userName">Игрок</span>
           <span class="user-handle" id="userHandle">@player</span>
-          <div class="level-row">
-            <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
-            <span class="level-num" id="levelNum">1 ур.</span>
-          </div>
         </div>
       </div>
       <!-- НФТ у ника: полноценная 3D, клик -> просмотр -->
@@ -68,6 +64,11 @@
         <span class="bal-val" id="balVal">0</span>
       </button>
     </header>
+
+    <div class="level-strip">
+      <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
+      <span class="level-num" id="levelNum">1 ур.</span>
+    </div>
 
     <div class="hero">
       <h1 class="logo">Glow<span>Up</span></h1>
@@ -121,10 +122,11 @@
         <span class="card-ico card-emoji">🃏</span>
         <span class="card-title">Выше-Ниже</span>
       </button>
-      <button class="nav-card nav-plinko" data-goto="plinko" style="--bg:url('assets/фон_игры_плинко.jpg')">
+      <button class="nav-card nav-plinko nav-locked" data-soon="plinko" style="--bg:url('assets/фон_игры_плинко.jpg')">
         <span class="card-shade"></span>
         <span class="card-ico card-emoji">🔵</span>
         <span class="card-title">Плинко</span>
+        <span class="card-soon">Скоро</span>
       </button>
       <button class="nav-card nav-market" style="--bg:url('assets/фон_игры_рынок.jpg')">
         <span class="card-shade"></span>
@@ -510,6 +512,26 @@
   </div>
 </div>
 
+<!-- ===================== ПРОФИЛЬ ===================== -->
+<div id="profileModal" class="modal">
+  <div class="modal-sheet">
+    <div class="profile-head">
+      <div class="profile-avatar" id="profAvatar"><span id="profAvatarPh">И</span></div>
+      <h3 id="profName">Игрок</h3>
+      <p class="profile-handle" id="profHandle">@player</p>
+    </div>
+    <div class="profile-stats">
+      <div class="stat"><b id="statLevel">1</b><span>Уровень</span></div>
+      <div class="stat"><b id="statHours">0ч</b><span>В игре</span></div>
+      <div class="stat"><b id="statGames">0</b><span>Игр</span></div>
+      <div class="stat"><b id="statStars">0</b><span>Звёзд</span></div>
+      <div class="stat"><b id="statKeys">0</b><span>Ключей</span></div>
+      <div class="stat"><b id="statXp">0/150</b><span>До уровня</span></div>
+    </div>
+    <button class="modal-close" id="profileClose">×</button>
+  </div>
+</div>
+
 <!-- ===================== КАРТА ===================== -->
 <div id="mapModal" class="modal">
   <div class="map-sheet">
@@ -524,6 +546,6 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app2.js?v=1"></script>
+<script src="app3.js?v=1"></script>
 </body>
 </html>

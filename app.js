@@ -29,6 +29,8 @@ const DEFAULT_STATE = {
   level: 1,              // уровень игрока
   levelXp: 0,            // опыт текущего уровня (0..150)
   usedCodes: {},         // активированные коды (чтобы не фармить повторно)
+  firstSeen: 0,          // ts первого захода (для «часов в игре»)
+  gamesPlayed: 0,        // сыграно раундов в играх
 };
 
 const MODEL_CATALOG = [
@@ -106,6 +108,7 @@ const el = {
   avatarImg:$('#avatarImg'), avatarPh:$('#avatarPh'),
   userName:$('#userName'), userHandle:$('#userHandle'),
   levelFill:$('#levelFill'), levelNum:$('#levelNum'),
+  avatar:$('#avatar'), profileModal:$('#profileModal'), profileClose:$('#profileClose'),
   nftChip:$('#nftChip'), nftCanvas:$('#nftCanvas'),
   balVal:$('#balVal'), balValShop:$('#balValShop'),
   balBtn:$('#balBtn'), balBtnShop:$('#balBtnShop'),
@@ -226,6 +229,36 @@ function addXp(amount){
   while(state.levelXp >= LEVEL_XP){ state.levelXp -= LEVEL_XP; state.level++; leveled=true; }
   save(); renderLevel();
   if(leveled) toast('Новый уровень: '+state.level+'!', true);
+}
+
+// ---------- Профиль / статистика ----------
+function fmtHours(ms){
+  const h=ms/3600000;
+  if(h<1) return Math.max(1, Math.round(ms/60000))+' мин';
+  if(h<24) return (Math.round(h*10)/10)+' ч';
+  return Math.floor(h)+' ч';
+}
+function countGame(){ state.gamesPlayed=(state.gamesPlayed||0)+1; save(); }
+function openProfile(){
+  const name=(el.userName.textContent||'Игрок').trim();
+  const handle=(el.userHandle.textContent||'@').trim();
+  const pn=document.getElementById('profName'), ph=document.getElementById('profHandle');
+  if(pn) pn.textContent=name;
+  if(ph) ph.textContent=handle;
+  const pa=document.getElementById('profAvatar');
+  const ai=document.getElementById('avatarImg');
+  if(pa){
+    if(ai && ai.style.display!=='none' && ai.getAttribute('src')){ pa.innerHTML='<img src="'+ai.getAttribute('src')+'" alt="">'; }
+    else { pa.textContent=name.charAt(0).toUpperCase()||'И'; }
+  }
+  const set=(id,v)=>{ const n=document.getElementById(id); if(n) n.textContent=v; };
+  set('statLevel', state.level||1);
+  set('statHours', fmtHours(Date.now()-(state.firstSeen||Date.now())));
+  set('statGames', state.gamesPlayed||0);
+  set('statStars', state.stars);
+  set('statKeys', state.keys);
+  set('statXp', (state.levelXp||0)+'/'+LEVEL_XP);
+  if(el.profileModal) el.profileModal.classList.add('open');
 }
 
 // ---------- Навигация ----------
@@ -693,7 +726,7 @@ function openCell(num){
   if(openingCell) return;
   if(state.keys<=0){ toast('Нужны ключи!'); return; }
   if(state.cellsOpened.includes(num)) return;
-  state.keys--; renderBalance();
+  state.keys--; countGame(); renderBalance();
   const res=cellPool[num-1];
   openingCell=true;
   state.cellsOpened.push(num);
@@ -800,7 +833,7 @@ function startMines(){
   mineState.effectiveMines = effectiveMines;
   mineState.opened=[];
   mineState.active=true;
-  state.stars-=bet; save(); renderBalance();
+  state.stars-=bet; countGame(); save(); renderBalance();
   renderMines();
 }
 function openMine(i){
@@ -961,7 +994,7 @@ function openCase(id){
   if(caseBusy) return;
   const c=CASES.find(x=>x.id===id); if(!c) return;
   if(state.stars < c.price){ toast('Недостаточно звёзд'); return; }
-  state.stars -= c.price; save(); renderBalance();
+  state.stars -= c.price; countGame(); save(); renderBalance();
   caseBusy=true;
   const prize = pickPrize(c);
   const TILE_W=92, GAP=10, WIN_INDEX=34;
@@ -1034,7 +1067,7 @@ function spinWheel(){
   const bet=parseInt(el.wheelBet.value,10);
   if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
   if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
-  state.stars-=bet; save(); renderBalance();
+  state.stars-=bet; countGame(); save(); renderBalance();
   wheelBusy=true;
   const idx = Math.floor(Math.random()*WHEEL_SEGS.length);
   const seg = 360/WHEEL_SEGS.length;
@@ -1075,7 +1108,7 @@ function startCups(){
   const bet=parseInt(el.cupsBet.value,10);
   if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
   if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
-  state.stars-=bet; save(); renderBalance();
+  state.stars-=bet; countGame(); save(); renderBalance();
   cupsState={ active:true, busy:true, ballCup:Math.floor(Math.random()*3), bet, cupPos:[0,1,2] };
   const cups=[...el.cupsRow.querySelectorAll('.cup')];
   cups.forEach((c,i)=>{ c.style.left=(i*(100/3))+'%'; c.classList.remove('peek','reveal','hit'); c.disabled=true; });
@@ -1151,7 +1184,7 @@ function rollDice(){
   const bet=parseInt(el.diceBet.value,10);
   if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
   if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
-  state.stars-=bet; save(); renderBalance();
+  state.stars-=bet; countGame(); save(); renderBalance();
   diceBusy=true;
   const d1=el.dice1, d2=el.dice2;
   d1.classList.add('rolling'); d2.classList.add('rolling');
@@ -1185,7 +1218,7 @@ function throwDart(){
   const bet=parseInt(el.dartsBet.value,10);
   if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
   if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
-  state.stars-=bet; save(); renderBalance();
+  state.stars-=bet; countGame(); save(); renderBalance();
   dartsBusy=true;
   const dart=el.dart;
   dart.style.transition='none'; dart.style.left='50%'; dart.style.top='92%'; dart.style.opacity='1';
@@ -1234,7 +1267,7 @@ function pullHilo(){
   const bet=parseInt(el.hiloBet.value,10);
   if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
   if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
-  state.stars-=bet; save(); renderBalance();
+  state.stars-=bet; countGame(); save(); renderBalance();
   hiloBusy=true;
   const nr=Math.floor(Math.random()*CARD_RANKS.length), ns=Math.floor(Math.random()*4);
   if(el.hiloNext){ el.hiloNext.className='card back'; el.hiloNext.innerHTML=''; }
@@ -1320,7 +1353,7 @@ function dropPlinko(){
   const bet=parseInt(el.plinkoBet.value,10);
   if(isNaN(bet)||bet<1){toast('Ставка от 1 звезды');return;}
   if(bet>state.stars){toast('Недостаточно звёзд');return;}
-  state.stars-=bet;save();renderBalance();
+  state.stars-=bet;countGame();save();renderBalance();
   plinkoBusy=true;
   const cv=el.plinkoCanvas;
   if(!cv || !cv._ctx) renderPlinko();
@@ -1367,6 +1400,8 @@ function finishPlinko(slot,bet){
    СОБЫТИЯ
    ===================================================================== */
 document.addEventListener('click',(e)=>{
+  const soon=e.target.closest('[data-soon]');
+  if(soon){ toast('Скоро появится!'); return; }
   const back=e.target.closest('[data-go]');
   if(back){ goBack(); return; }
   const g=e.target.closest('[data-goto]');
@@ -1402,6 +1437,11 @@ el.giftClaimBtn && el.giftClaimBtn.addEventListener('click',claimGift);
 if(el.mapBtn) el.mapBtn.addEventListener('click',()=>el.mapModal.classList.add('open'));
 if(el.mapClose) el.mapClose.addEventListener('click',()=>el.mapModal.classList.remove('open'));
 if(el.mapModal) el.mapModal.addEventListener('click',e=>{ if(e.target===el.mapModal) el.mapModal.classList.remove('open'); });
+
+// профиль (клик по аватару)
+if(el.avatar) el.avatar.addEventListener('click',openProfile);
+if(el.profileClose) el.profileClose.addEventListener('click',()=>el.profileModal.classList.remove('open'));
+if(el.profileModal) el.profileModal.addEventListener('click',e=>{ if(e.target===el.profileModal) el.profileModal.classList.remove('open'); });
 
 // кейсы
 el.caseGrid && el.caseGrid.addEventListener('click',e=>{
@@ -1471,6 +1511,7 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
   const hideLoad=()=>{ const ls=document.getElementById('loadingScreen'); if(ls) ls.classList.add('hidden'); };
   setTimeout(hideLoad, 3800);            // страховка, если что-то задержится
   load(); initTelegram();
+  if(!state.firstSeen){ state.firstSeen=Date.now(); save(); }
   renderBalance(); renderLevel(); renderNFT(); renderCells();
   renderGiftFab();
   await threeReady();
