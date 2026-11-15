@@ -121,14 +121,36 @@ const el = {
 function initTelegram(){
   if (window.Telegram && window.Telegram.WebApp){
     tg = window.Telegram.WebApp; isTG = true;
-    try{ tg.ready(); tg.expand(); }catch(_){}
+    try{
+      tg.ready();
+      tg.expand();
+      tg.enableClosingConfirmation && tg.enableClosingConfirmation();
+    }catch(_){}
     const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
     if (u){
       el.userName.textContent = u.first_name || 'Игрок';
       el.userHandle.textContent = u.username ? '@'+u.username : 'id '+u.id;
       if (u.photo_url){ el.avatarImg.src=u.photo_url; el.avatarImg.style.display='block'; el.avatarPh.style.display='none'; }
-      try{ tg.setHeaderColor('#0a0a0f'); tg.setBackgroundColor('#0a0a0f'); }catch(_){}
+      try{
+        // точный фон под Telegram
+        const dark = tg.colorScheme === 'dark';
+        tg.setHeaderColor && tg.setHeaderColor(dark ? '#0a0a0f' : '#f3f2ee');
+        tg.setBackgroundColor && tg.setBackgroundColor(dark ? '#0a0a0f' : '#f3f2ee');
+      }catch(_){}
     }
+    // скрыть системную кнопку Телеграма — у нас своя навигация
+    try{ tg.MainButton && tg.MainButton.hide(); }catch(_){}
+  }
+}
+// кнопка «назад» в шапке Telegram (нативная, слева) — включаем
+function tgSetBack(cb){
+  if (tg && isTG && tg.BackButton){
+    try{ tg.BackButton.show(); tg.BackButton.onClick(cb); }catch(_){}
+  }
+}
+function tgHideBack(){
+  if (tg && isTG && tg.BackButton){
+    try{ tg.BackButton.hide(); }catch(_){}
   }
 }
 
@@ -161,6 +183,14 @@ function goto(name){
   if (name==='shop') renderShop();
   if (name==='cells') renderCells();
   if (name==='mines') renderMines();
+  // нативная кнопка «назад» Telegram на подэкранах
+  if (name === 'menu') tgHideBack();
+  else {
+    if (isTG && !window.__tgBackHooked){
+      tgSetBack(()=>goBack());
+      window.__tgBackHooked = true;
+    }
+  }
 }
 function goBack(){ goto('menu'); }
 
