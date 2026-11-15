@@ -887,7 +887,7 @@ function renderCases(){
     const d=document.createElement('div');
     d.className='case-card'; d.style.setProperty('--accent', c.accent);
     d.innerHTML = `
-      <div class="case-thumb">${c.icon}</div>
+      <div class="case-thumb"><img src="assets/case-${c.id}.jpg" alt=""></div>
       <div class="case-meta">
         <div class="case-name">${c.name}</div>
         <div class="case-sub">${c.sub}</div>
@@ -1018,13 +1018,13 @@ function startCups(){
       cups.forEach(c=>c.disabled=false);
       if(el.cupsHint) el.cupsHint.textContent='Где шарик? Нажми на стакан!';
     });
-  }, 1200);
+  }, 800);
 }
 function shuffleCups(cups){
   return new Promise(resolve=>{
     let swaps=0;
     const doSwap=()=>{
-      if(swaps>=5){ resolve(); return; }
+      if(swaps>=6){ resolve(); return; }
       let a=Math.floor(Math.random()*3), b=Math.floor(Math.random()*3);
       while(b===a) b=Math.floor(Math.random()*3);
       const sa=cupsState.cupPos[a], sb=cupsState.cupPos[b];
@@ -1032,7 +1032,7 @@ function shuffleCups(cups){
       cups[a].style.left=(sb*(100/3))+'%';
       cups[b].style.left=(sa*(100/3))+'%';
       swaps++;
-      setTimeout(doSwap, 360);
+      setTimeout(doSwap, 170);
     };
     doSwap();
   });
@@ -1050,6 +1050,12 @@ function pickCup(cupIndex){
   cupsState.active=false;
   if(el.cupsHint) el.cupsHint.textContent = win ? ('Точно! +'+payout+' ⭐') : 'Мимо… шарик был под другим стаканом.';
   if(win) toast('Угадал! +'+payout+' ⭐', true); else toast('Не угадал. Попробуй ещё');
+  // после игры стаканы возвращаются на свои места, шарик остаётся виден
+  setTimeout(()=>{
+    cups.forEach((c,i)=>{ c.style.left=(i*(100/3))+'%'; });
+    cupsState.cupPos=[0,1,2];
+    if(win) cups[cupIndex].classList.remove('hit');
+  }, 800);
   setTimeout(()=>{ cupsState.busy=false; }, 400);
 }
 

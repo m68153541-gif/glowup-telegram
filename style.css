@@ -72,7 +72,7 @@ canvas{display:block}
 
 /* НФТ рядом с ником — полноценная 3D модель, круглая, без фона */
 .nft-chip{
-  position:relative;width:150px;height:150px;flex:none;cursor:pointer;
+  position:relative;width:52px;height:52px;flex:none;cursor:pointer;
   border-radius:50%;overflow:hidden;
   background:transparent;border:none;
   transition:transform .18s;
@@ -90,9 +90,9 @@ canvas{display:block}
 .nft-chip #nftCanvas{position:absolute;inset:0;width:100%;height:100%;background:transparent!important}
 .nft-chip #nftCanvas>.view3d,.nft-chip #nftCanvas>div{width:100%;height:100%}
 .nft-chip-badge{
-  position:absolute;left:50%;transform:translateX(-50%);bottom:-12px;
-  font-size:12px;font-weight:800;color:#1a1000;
-  background:var(--gold);padding:3px 14px;border-radius:20px;letter-spacing:.02em;white-space:nowrap;
+  position:absolute;left:50%;transform:translateX(-50%);bottom:-7px;
+  font-size:8px;font-weight:800;color:#1a1000;
+  background:var(--gold);padding:1px 7px;border-radius:20px;letter-spacing:.02em;white-space:nowrap;
   border:1px solid rgba(0,0,0,.3);
 }
 .nft-chip.empty::before{box-shadow:0 0 0 2px rgba(255,255,255,.12)}
@@ -579,10 +579,10 @@ canvas{display:block}
 
 /* Подарок: круглая кнопка в левом углу меню */
 .gift-fab{
-  position:absolute;top:calc(env(safe-area-inset-top) + 12px);left:16px;z-index:6;
-  width:48px;height:48px;border-radius:50%;border:1px solid var(--line);
+  position:relative;flex:none;z-index:6;
+  width:44px;height:44px;border-radius:50%;border:1px solid var(--line);
   background:var(--panel);display:flex;align-items:center;justify-content:center;
-  font-size:24px;cursor:pointer;backdrop-filter:blur(10px);box-shadow:var(--shadow);
+  font-size:22px;cursor:pointer;backdrop-filter:blur(10px);box-shadow:var(--shadow);
   transition:transform .15s,box-shadow .3s,background .3s;
 }
 .gift-fab:active{transform:scale(.92)}
@@ -633,9 +633,10 @@ canvas{display:block}
 .case-card::before{content:"";position:absolute;inset:0;opacity:.16;background:var(--accent);z-index:0;pointer-events:none}
 .case-card>*{position:relative;z-index:1}
 .case-thumb{
-  width:70px;height:70px;border-radius:18px;flex:none;display:flex;align-items:center;justify-content:center;
-  font-size:36px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.15);
+  width:84px;height:84px;border-radius:18px;flex:none;display:flex;align-items:center;justify-content:center;
+  font-size:36px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.15);overflow:hidden;
 }
+.case-thumb img{width:100%;height:100%;object-fit:cover;display:block}
 .case-meta{flex:1;min-width:0}
 .case-name{font-weight:800;font-size:16px}
 .case-sub{font-size:11px;color:var(--muted);margin-top:3px}
@@ -698,15 +699,15 @@ canvas{display:block}
 .cups-row{position:relative;width:100%;max-width:330px;height:132px}
 .cup{
   position:absolute;top:0;width:31%;height:100%;left:0;border:none;background:transparent;
-  cursor:pointer;transition:left .32s cubic-bezier(.4,.1,.3,1);padding:0;
+  cursor:pointer;transition:left .16s cubic-bezier(.4,.1,.3,1);padding:0;
 }
 .cup .cup-ico{
   position:relative;z-index:2;display:block;font-size:64px;line-height:1;
-  transition:transform .3s;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5));
+  transition:transform .18s;filter:drop-shadow(0 6px 14px rgba(0,0,0,.5));
 }
 .cup .cup-ball{
   position:absolute;left:50%;bottom:2px;transform:translateX(-50%) translateY(24px);
-  font-size:28px;opacity:0;transition:.3s;z-index:1;
+  font-size:28px;opacity:0;transition:.18s;z-index:1;
 }
 .cup.peek .cup-ico,.cup.reveal .cup-ico{transform:translateY(-46px)}
 .cup.peek .cup-ball,.cup.reveal .cup-ball{opacity:1;transform:translateX(-50%) translateY(0)}
