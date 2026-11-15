@@ -18,7 +18,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="style.css?v=10" />
+<link rel="stylesheet" href="style.css?v=11" />
 </head>
 <body>
 <div id="loadingScreen">
@@ -35,6 +35,10 @@
     <div class="ambient-orb"></div>
 
     <header class="topbar">
+      <!-- Кнопка карты рядом с подарком -->
+      <button class="gift-fab" id="mapBtn" title="Карта">
+        <span class="gift-fab-ico">🗺️</span>
+      </button>
       <!-- Подарок: иконка в шапке слева, горит когда доступен -->
       <button class="gift-fab" id="giftFab" title="Ежедневный подарок">
         <span class="gift-fab-ico">🎁</span>
@@ -48,6 +52,10 @@
         <div class="user-meta">
           <span class="user-name" id="userName">Игрок</span>
           <span class="user-handle" id="userHandle">@player</span>
+          <div class="level-row">
+            <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
+            <span class="level-num" id="levelNum">1 ур.</span>
+          </div>
         </div>
       </div>
       <!-- НФТ у ника: полноценная 3D, клик -> просмотр -->
@@ -113,10 +121,10 @@
         <span class="card-ico card-emoji">🃏</span>
         <span class="card-title">Выше-Ниже</span>
       </button>
-      <button class="nav-card nav-timing" data-goto="timing" style="--bg:url('assets/фон_игры_тайминг.jpg')">
+      <button class="nav-card nav-plinko" data-goto="plinko" style="--bg:url('assets/фон_игры_плинко.jpg')">
         <span class="card-shade"></span>
-        <span class="card-ico card-emoji">⏱️</span>
-        <span class="card-title">Тайминг</span>
+        <span class="card-ico card-emoji">🔵</span>
+        <span class="card-title">Плинко</span>
       </button>
       <button class="nav-card nav-market" style="--bg:url('assets/фон_игры_рынок.jpg')">
         <span class="card-shade"></span>
@@ -339,25 +347,22 @@
     </div>
   </section>
 
-  <!-- ===================== ТАЙМИНГ ===================== -->
-  <section id="screen-timing" class="screen">
-    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_тайминг.jpg')"></div>
+  <!-- ===================== ПЛИНКО ===================== -->
+  <section id="screen-plinko" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_плинко.jpg')"></div>
     <header class="subbar">
       <button class="back-btn" data-go="menu">←</button>
-      <h2>Тайминг</h2>
-      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="timingBalance">0</span></button>
+      <h2>Плинко</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="plinkoBalance">0</span></button>
     </header>
     <div class="screen-body">
-      <div class="timing-track" id="timingTrack">
-        <div class="timing-zone"></div>
-        <div class="timing-marker" id="timingMarker"></div>
-      </div>
-      <div class="mines-row">
+      <div class="plinko-wrap"><canvas id="plinkoCanvas"></canvas></div>
+      <div class="mines-row" style="margin-top:10px">
         <label>Ставка</label>
-        <input id="timingBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
+        <input id="plinkoBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
       </div>
-      <button class="solid-btn purple" id="timingStop">Начать</button>
-      <p class="cells-note">Останови бегунок точно в зелёной зоне. Чем ближе к центру — тем больше множитель (до x5).</p>
+      <button class="solid-btn purple" id="plinkoDrop">Бросить шарик</button>
+      <p class="cells-note">Шарик падает по колышкам в лунку. Края — x8, центр — x0.3. Выиграть можно, но трудно.</p>
     </div>
   </section>
 
@@ -505,12 +510,20 @@
   </div>
 </div>
 
+<!-- ===================== КАРТА ===================== -->
+<div id="mapModal" class="modal">
+  <div class="map-sheet">
+    <img id="mapImg" src="assets/карта_игры.png" alt="Карта" />
+    <button class="modal-close" id="mapClose">×</button>
+  </div>
+</div>
+
 <!-- ===================== ТОСТЫ ===================== -->
 <div id="toasts"></div>
 
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app.js?v=32"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>

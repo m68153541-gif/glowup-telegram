@@ -11,6 +11,7 @@ const KEY_PACKS   = [ {n:1, price:100}, {n:5, price:500}, {n:10, price:1000} ];
 const DONATE_BOT  = '@gryzikkk200';
 const GIFT_INTERVAL = 24*60*60*1000;  // раз в 24 часа
 const GIFT_KEYS     = 3;               // 3 ключа за подарок
+const LEVEL_XP      = 150;             // звёзд на 1 уровень
 // Токен Telegram-бота (тестовый). Используется для серверных вызовов Telegram Bot API.
 const BOT_TOKEN   = '9079841137:AAGFVzPLH2-3bgsYDu-yBL587CzbEXTQ1g4';
 
@@ -25,12 +26,16 @@ const DEFAULT_STATE = {
   cellResetAt: 0,       // ts автоматического сброса ячеек (14:00 МСК)
   cellForceReset: false,
   gift: { lastClaim: 0 },   // ts последнего получения ежедневного подарка
+  level: 1,              // уровень игрока
+  levelXp: 0,            // опыт текущего уровня (0..150)
+  usedCodes: {},         // активированные коды (чтобы не фармить повторно)
 };
 
 const MODEL_CATALOG = [
   { id:'1', name:'DianaLovis', rarity:'legendary', price:1000, model:'assets/DianaLovis.glb', image:'assets/фон_модели_DianaLovis.png' },
   { id:'2', name:'LerwaxiMi', rarity:'epic',      price:2500, model:'assets/LerwaxiMi.glb', image:'assets/фон_модели_LerwaxiMi.png' },
   { id:'3', name:'Sweaty',     rarity:'common',   price:900,  model:'assets/Sweaty.glb', image:'assets/фон_модели_Sweaty.png' },
+  { id:'4', name:'lilgoga',    rarity:'epic',     price:1500, model:'assets/lilgoga.glb', image:'assets/фон_модели_lilgoga.png' },
 ];
 
 // ---------- Ячейки: 30, два больших приза 300-500, остальные мелкие ----------
@@ -100,6 +105,7 @@ const $ = s=>document.querySelector(s);
 const el = {
   avatarImg:$('#avatarImg'), avatarPh:$('#avatarPh'),
   userName:$('#userName'), userHandle:$('#userHandle'),
+  levelFill:$('#levelFill'), levelNum:$('#levelNum'),
   nftChip:$('#nftChip'), nftCanvas:$('#nftCanvas'),
   balVal:$('#balVal'), balValShop:$('#balValShop'),
   balBtn:$('#balBtn'), balBtnShop:$('#balBtnShop'),
@@ -119,6 +125,8 @@ const el = {
   minesStart:$('#minesStart'), minesBalance:$('#minesBalance'), minesMultiplier:$('#minesMultiplier'),
   // подарок
   giftFab:$('#giftFab'), giftClaimBtn:$('#giftClaimBtn'), giftTimer:$('#giftTimer'), giftHero:$('#giftHero'),
+  // карта
+  mapBtn:$('#mapBtn'), mapModal:$('#mapModal'), mapClose:$('#mapClose'),
   // кейсы
   casesBalance:$('#casesBalance'), caseGrid:$('#caseGrid'),
   caseModal:$('#caseModal'), caseReel:$('#caseReel'), caseResult:$('#caseResult'), caseClaim:$('#caseClaim'),
@@ -132,8 +140,8 @@ const el = {
   dartsBalance:$('#dartsBalance'), dartsBoard:$('#dartsBoard'), dart:$('#dart'), dartsBet:$('#dartsBet'), dartsThrow:$('#dartsThrow'),
   // выше-ниже
   hiloBalance:$('#hiloBalance'), hiloCur:$('#hiloCur'), hiloNext:$('#hiloNext'), hiloBet:$('#hiloBet'), hiloPull:$('#hiloPull'),
-  // тайминг
-  timingBalance:$('#timingBalance'), timingTrack:$('#timingTrack'), timingMarker:$('#timingMarker'), timingBet:$('#timingBet'), timingStop:$('#timingStop'),
+  // плинко
+  plinkoBalance:$('#plinkoBalance'), plinkoCanvas:$('#plinkoCanvas'), plinkoBet:$('#plinkoBet'), plinkoDrop:$('#plinkoDrop'),
   toasts:$('#toasts'),
 };
 
@@ -197,9 +205,27 @@ function renderBalance(){
   if (el.diceBalance) el.diceBalance.textContent = state.stars;
   if (el.dartsBalance) el.dartsBalance.textContent = state.stars;
   if (el.hiloBalance) el.hiloBalance.textContent = state.stars;
-  if (el.timingBalance) el.timingBalance.textContent = state.stars;
+  if (el.plinkoBalance) el.plinkoBalance.textContent = state.stars;
   const badge = document.querySelector('[data-badge="keys"]');
   if (badge) badge.textContent = state.keys + ' 🔑';
+}
+
+// ---------- Уровень ----------
+function renderLevel(){
+  const lv = state.level||1;
+  const xp = state.levelXp||0;
+  if(el.levelNum) el.levelNum.textContent = lv + ' ур.';
+  if(el.levelFill) el.levelFill.style.width = Math.min(100, Math.round(xp/LEVEL_XP*100)) + '%';
+}
+function addXp(amount){
+  amount = Math.round(amount||0);
+  if(amount<=0) return;
+  state.level = state.level||1;
+  state.levelXp = (state.levelXp||0) + amount;
+  let leveled=false;
+  while(state.levelXp >= LEVEL_XP){ state.levelXp -= LEVEL_XP; state.level++; leveled=true; }
+  save(); renderLevel();
+  if(leveled) toast('Новый уровень: '+state.level+'!', true);
 }
 
 // ---------- Навигация ----------
@@ -217,7 +243,7 @@ function goto(name){
   if (name==='dice') renderDice();
   if (name==='darts') renderDarts();
   if (name==='hilo') renderHilo();
-  if (name==='timing') renderTiming();
+  if (name==='plinko') renderPlinko();
   if (name==='gift') renderGiftScreen();
   if (name==='menu') renderGiftFab();
   // нативная кнопка «назад» Telegram на подэкранах
@@ -677,7 +703,7 @@ function openCell(num){
   setTimeout(()=>{ renderCells(); showPrize(res); }, 500);
 }
 function showPrize(res){
-  if(res.type==='big'||res.type==='stars'){ state.stars+=res.stars; renderBalance(); }
+  if(res.type==='big'||res.type==='stars'){ state.stars+=res.stars; addXp(res.stars); renderBalance(); }
   else if(res.type==='key'){ state.keys+=1; renderBalance(); }
   save();
   const texts={ key:'Ты нашёл ключ! 🔑', big:'ДЖЕКПОТ! 💎 +'+res.stars, stars:'+'+res.stars+' звёзд', none:'Пусто…' };
@@ -795,7 +821,7 @@ function cashoutMines(){
   if(!mineState.active || mineState.opened.length===0) return;
   const realMines = mineState.effectiveMines || mineState.totalMines;
   const w=Math.floor(mineState.bet * multiplierFor(realMines, mineState.opened.length));
-  state.stars+=w; save(); renderBalance();
+  state.stars+=w; addXp(w); save(); renderBalance();
   mineState.active=false;
   toast('Ты забрал '+w+' ⭐!', true);
   renderMines(); renderBalance();
@@ -806,8 +832,14 @@ function cashoutMines(){
    ===================================================================== */
 function applyCode(){
   const v=(el.codeInput.value||'').trim();
-  if(v===CODE_PASS){ state.stars+=CODE_REWARD; save(); renderBalance(); toast('+'+CODE_REWARD+' звёзд!',true); el.codeInput.value=''; }
-  else toast('Неверный код');
+  if(v!==CODE_PASS){ toast('Неверный код'); return; }
+  state.usedCodes = state.usedCodes || {};
+  if(state.usedCodes[v]){ toast('Этот код уже активирован'); return; }
+  state.usedCodes[v]=true;
+  state.stars+=CODE_REWARD;
+  save(); renderBalance();
+  toast('+'+CODE_REWARD+' звёзд!',true);
+  el.codeInput.value='';
 }
 function donate(){ toast('Донат через бота '+DONATE_BOT); }
 
@@ -958,7 +990,7 @@ function openCase(id){
   });});
   setTimeout(()=>{
     if(prize.type==='key') state.keys += prize.count;
-    else state.stars += prize.amount;
+    else { state.stars += prize.amount; addXp(prize.amount); }
     save(); renderBalance();
     el.caseResult.textContent = 'Выпало: '+prizeLabel(prize);
     caseBusy=false;
@@ -1018,7 +1050,7 @@ function spinWheel(){
   setTimeout(()=>{
     const segData=WHEEL_SEGS[idx];
     const win=Math.round(bet*segData.m);
-    state.stars+=win; save(); renderBalance();
+    state.stars+=win; addXp(win); save(); renderBalance();
     if(segData.m>=1) toast('x'+segData.m+'! Выигрыш '+win+' ⭐', true);
     else if(win<bet) toast('x'+segData.m+' — '+win+' ⭐ (меньше ставки)');
     else toast('x'+segData.m+' — '+win+' ⭐');
@@ -1084,7 +1116,7 @@ function pickCup(cupIndex){
   cups[cupsState.ballCup].classList.add('reveal');
   if(win) cups[cupIndex].classList.add('hit');
   let payout=0;
-  if(win){ payout=Math.round(cupsState.bet*CUPS_PAYOUT); state.stars+=payout; save(); renderBalance(); }
+  if(win){ payout=Math.round(cupsState.bet*CUPS_PAYOUT); state.stars+=payout; addXp(payout); save(); renderBalance(); }
   cupsState.active=false;
   if(el.cupsHint) el.cupsHint.textContent = win ? ('Точно! +'+payout+' ⭐') : 'Мимо… шарик был под другим стаканом.';
   if(win) toast('Угадал! +'+payout+' ⭐', true); else toast('Не угадал. Попробуй ещё');
@@ -1135,7 +1167,7 @@ function rollDice(){
     else if(dicePick==='high') win = sum>7;
     else { mult=4.5; win = sum===7; }
     const payout = win ? Math.round(bet*mult) : 0;
-    if(win){ state.stars+=payout; save(); renderBalance(); toast('Выпало '+v1+'+'+v2+'='+sum+'. Победа +'+payout+' ⭐', true); }
+    if(win){ state.stars+=payout; addXp(payout); save(); renderBalance(); toast('Выпало '+v1+'+'+v2+'='+sum+'. Победа +'+payout+' ⭐', true); }
     else toast('Выпало '+v1+'+'+v2+'='+sum+'. Не угадал');
     diceBusy=false;
   }, 1200);
@@ -1172,7 +1204,7 @@ function throwDart(){
   else {mult=0;label='Мимо';}
   setTimeout(()=>{
     const payout=Math.round(bet*mult);
-    if(payout>0){ state.stars+=payout; save(); renderBalance(); }
+    if(payout>0){ state.stars+=payout; addXp(payout); save(); renderBalance(); }
     if(mult>=1) toast(label+'! x'+mult+' +'+payout+' ⭐', true);
     else if(mult>0) toast(label+': x'+mult+' — '+payout+' ⭐ (меньше ставки)');
     else toast('Мимо! Дротик не попал в цель');
@@ -1213,7 +1245,7 @@ function pullHilo(){
     let win=false;
     if(hiloPick==='high') win = nextV>curV; else win = nextV<curV;
     const payout = win ? Math.round(bet*1.9) : 0;
-    if(win){ state.stars+=payout; save(); renderBalance(); toast('Победа! +'+payout+' ⭐', true); }
+    if(win){ state.stars+=payout; addXp(payout); save(); renderBalance(); toast('Победа! +'+payout+' ⭐', true); }
     else if(nextV===curV) toast('Равные карты — не повезло');
     else toast('Не угадал');
     setTimeout(()=>{
@@ -1226,50 +1258,109 @@ function pullHilo(){
 }
 
 /* =====================================================================
-   ТАЙМИНГ (стоп в зоне, x1.1 … x5)
+   ПЛИНКО (шарик по колышкам; края x8, центр x0.3; EV ~0.82)
    ===================================================================== */
-const timingState={running:false,armed:false,pos:0,dir:1,bet:0,raf:0};
-function renderTiming(){
-  cancelAnimationFrame(timingState.raf);
-  timingState.running=false; timingState.armed=false; timingState.pos=0; timingState.dir=1;
-  if(el.timingMarker) el.timingMarker.style.left='0%';
-  if(el.timingStop) el.timingStop.textContent='Начать';
+const PLINKO_MULT=[8,2.5,1.2,0.6,0.3,0.6,1.2,2.5,8];
+const PLINKO_ROWS=8;
+let plinkoBusy=false;
+function plinkoGeom(W,H){
+  const slots=PLINKO_MULT.length;
+  const slotW=(W-24)/slots;
+  const slotY=H-34;
+  const top=16;
+  const rowH=(slotY-top-8)/(PLINKO_ROWS+1);
+  const x0=12+slotW*4.5;
+  const half=slotW/2;
+  return {slots,slotW,slotY,top,rowH,x0,half};
 }
-function timingTick(){
-  if(!timingState.running) return;
-  const scr=document.getElementById('screen-timing');
-  if(!scr || !scr.classList.contains('active')){ timingState.running=false; timingState.armed=false; if(el.timingStop) el.timingStop.textContent='Начать'; return; }
-  timingState.pos += timingState.dir*1.6;
-  if(timingState.pos>=100){ timingState.pos=100; timingState.dir=-1; }
-  if(timingState.pos<=0){ timingState.pos=0; timingState.dir=1; }
-  if(el.timingMarker) el.timingMarker.style.left=timingState.pos+'%';
-  timingState.raf=requestAnimationFrame(timingTick);
-}
-function timingButton(){
-  if(!timingState.armed){
-    const bet=parseInt(el.timingBet.value,10);
-    if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
-    if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
-    state.stars-=bet; save(); renderBalance();
-    timingState.bet=bet; timingState.pos=0; timingState.dir=1; timingState.running=true; timingState.armed=true;
-    if(el.timingStop) el.timingStop.textContent='Стоп';
-    timingTick();
-  } else {
-    timingState.running=false; timingState.armed=false;
-    cancelAnimationFrame(timingState.raf);
-    if(el.timingStop) el.timingStop.textContent='Начать';
-    const d=Math.abs(timingState.pos-50);
-    let mult=0,label='';
-    if(d<4){mult=5;label='Идеально';}
-    else if(d<10){mult=2;label='Точно';}
-    else if(d<18){mult=1.1;label='Близко';}
-    else {mult=0;label='Мимо';}
-    const payout=Math.round(timingState.bet*mult);
-    if(payout>0){ state.stars+=payout; save(); renderBalance(); }
-    if(mult>=1) toast(label+'! x'+mult+' +'+payout+' ⭐', true);
-    else if(mult>0) toast(label+': x'+mult+' — '+payout+' ⭐');
-    else toast('Мимо зоны!');
+function rr(ctx,x,y,w,h,r){r=Math.min(r,w/2,h/2);ctx.beginPath();ctx.moveTo(x+r,y);ctx.arcTo(x+w,y,x+w,y+h,r);ctx.arcTo(x+w,y+h,x,y+h,r);ctx.arcTo(x,y+h,x,y,r);ctx.arcTo(x,y,x+w,y,r);ctx.closePath();}
+function drawBoard(ctx,W,H,ball,flashSlot){
+  const G=plinkoGeom(W,H);
+  ctx.clearRect(0,0,W,H);
+  for(let i=0;i<G.slots;i++){
+    const x=12+G.slotW*(i+0.5);
+    const isEdge=(i===0||i===G.slots-1);
+    ctx.fillStyle = flashSlot===i ? '#ffd76a' : (isEdge?'#5a3fbf':'#242438');
+    ctx.strokeStyle='rgba(255,255,255,.18)';ctx.lineWidth=1;
+    rr(ctx, x-(G.slotW-4)/2, G.slotY, G.slotW-4, 24, 6); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = flashSlot===i? '#1a1000':'#cfc8ff';
+    ctx.font='bold 11px Unbounded, sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('x'+PLINKO_MULT[i], x, G.slotY+12);
   }
+  for(let r=0;r<PLINKO_ROWS;r++){
+    const y=G.top+(r+1)*G.rowH;
+    for(let k=-(r+1);k<=(r+1);k+=2){
+      const x=G.x0+k*G.half;
+      ctx.beginPath();ctx.arc(x,y,3.2,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,.78)';
+      ctx.shadowColor='rgba(160,190,255,.8)';ctx.shadowBlur=8;ctx.fill();ctx.shadowBlur=0;
+    }
+  }
+  if(ball){
+    ctx.beginPath();ctx.arc(ball.x,ball.y,9,0,Math.PI*2);
+    const grd=ctx.createRadialGradient(ball.x-3,ball.y-3,2,ball.x,ball.y,10);
+    grd.addColorStop(0,'#fff');grd.addColorStop(0.5,'#ffd76a');grd.addColorStop(1,'#e8892a');
+    ctx.fillStyle=grd;ctx.shadowColor='rgba(255,215,106,.9)';ctx.shadowBlur=16;ctx.fill();ctx.shadowBlur=0;
+  }
+}
+function renderPlinko(){
+  plinkoBusy=false;
+  const cv=el.plinkoCanvas; if(!cv) return;
+  const W=Math.max(280, Math.round(cv.getBoundingClientRect().width||300));
+  const H=Math.round(W*1.05);
+  const dpr=Math.min(window.devicePixelRatio||1,2);
+  cv.width=W*dpr;cv.height=H*dpr;cv.style.height=H+'px';
+  const ctx=cv.getContext('2d');ctx.setTransform(dpr,0,0,dpr,0,0);
+  cv._ctx=ctx;cv._W=W;cv._H=H;
+  const G=plinkoGeom(W,H);
+  drawBoard(ctx,W,H,{x:G.x0,y:G.top},null);
+}
+function dropPlinko(){
+  if(plinkoBusy) return;
+  const bet=parseInt(el.plinkoBet.value,10);
+  if(isNaN(bet)||bet<1){toast('Ставка от 1 звезды');return;}
+  if(bet>state.stars){toast('Недостаточно звёзд');return;}
+  state.stars-=bet;save();renderBalance();
+  plinkoBusy=true;
+  const cv=el.plinkoCanvas;
+  if(!cv || !cv._ctx) renderPlinko();
+  const ctx=cv._ctx,W=cv._W,H=cv._H,G=plinkoGeom(W,H);
+  const pts=[{x:G.x0,y:G.top}];
+  let x=G.x0,rights=0;
+  for(let r=0;r<PLINKO_ROWS;r++){
+    const dir=Math.random()<0.5?-1:1;
+    if(dir>0)rights++;
+    x+=dir*G.half;
+    pts.push({x:x,y:G.top+(r+1)*G.rowH});
+  }
+  const slot=rights;
+  const start=performance.now(),seg=140,total=seg*(pts.length-1);
+  let settled=false;
+  function settle(){
+    if(settled) return; settled=true;
+    drawBoard(ctx,W,H,{x:12+G.slotW*(slot+0.5),y:G.slotY+12},slot);
+    finishPlinko(slot,bet);
+  }
+  function frame(t){
+    if(settled) return;
+    let p=(t-start)/total; if(!isFinite(p)) p=1; p=Math.max(0,Math.min(1,p));
+    const gg=p*(pts.length-1);
+    const i=Math.max(0,Math.min(pts.length-2,Math.floor(gg)));
+    const f=gg-i,a=pts[i],b=pts[i+1];
+    const bx=a.x+(b.x-a.x)*f, by=a.y+(b.y-a.y)*f-Math.sin(f*Math.PI)*4;
+    drawBoard(ctx,W,H,{x:bx,y:by},null);
+    if(p<1) requestAnimationFrame(frame); else settle();
+  }
+  requestAnimationFrame(frame);
+  setTimeout(settle, total+600); // страховка, если кадры не идут
+}
+function finishPlinko(slot,bet){
+  const mult=PLINKO_MULT[slot];
+  const payout=Math.round(bet*mult);
+  if(payout>0){ state.stars+=payout; if(typeof addXp==='function') addXp(payout); save(); renderBalance(); }
+  if(mult>=1) toast('x'+mult+'! +'+payout+' ⭐', true);
+  else if(payout>0) toast('x'+mult+' — '+payout+' ⭐ (меньше ставки)');
+  setTimeout(function(){ plinkoBusy=false; },500);
 }
 
 /* =====================================================================
@@ -1307,6 +1398,11 @@ el.prizeContinue.addEventListener('click',closePrize);
 el.giftFab && el.giftFab.addEventListener('click',()=>goto('gift'));
 el.giftClaimBtn && el.giftClaimBtn.addEventListener('click',claimGift);
 
+// карта
+if(el.mapBtn) el.mapBtn.addEventListener('click',()=>el.mapModal.classList.add('open'));
+if(el.mapClose) el.mapClose.addEventListener('click',()=>el.mapModal.classList.remove('open'));
+if(el.mapModal) el.mapModal.addEventListener('click',e=>{ if(e.target===el.mapModal) el.mapModal.classList.remove('open'); });
+
 // кейсы
 el.caseGrid && el.caseGrid.addEventListener('click',e=>{
   const b=e.target.closest('[data-case]');
@@ -1334,8 +1430,8 @@ if(el.dartsThrow) el.dartsThrow.addEventListener('click',throwDart);
 if(el.hiloPull) el.hiloPull.addEventListener('click',pullHilo);
 document.querySelectorAll('.dice-choice[data-hilo]').forEach(b=>b.addEventListener('click',()=>{ hiloPick=b.dataset.hilo; renderHilo(); }));
 
-// тайминг
-if(el.timingStop) el.timingStop.addEventListener('click',timingButton);
+// плинко
+if(el.plinkoDrop) el.plinkoDrop.addEventListener('click',dropPlinko);
 
 // ячейки: кнопки
 el.openOneBtn && el.openOneBtn.addEventListener('click',()=>{
@@ -1375,7 +1471,7 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
   const hideLoad=()=>{ const ls=document.getElementById('loadingScreen'); if(ls) ls.classList.add('hidden'); };
   setTimeout(hideLoad, 3800);            // страховка, если что-то задержится
   load(); initTelegram();
-  renderBalance(); renderNFT(); renderCells();
+  renderBalance(); renderLevel(); renderNFT(); renderCells();
   renderGiftFab();
   await threeReady();
   renderNFT();
