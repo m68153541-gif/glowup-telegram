@@ -18,13 +18,20 @@
   }
 }
 </script>
-<link rel="stylesheet" href="style.css?v=8" />
+<link rel="stylesheet" href="style.css?v=9" />
 </head>
 <body>
+<div id="loadingScreen">
+  <div class="load-inner">
+    <div class="load-logo">Glow<span>Up</span></div>
+    <div class="load-spinner"></div>
+    <div class="load-tip">Загрузка…</div>
+  </div>
+</div>
 <div id="app">
   <!-- ===================== ГЛАВНОЕ МЕНЮ ===================== -->
   <section id="screen-menu" class="screen active">
-    <div class="screen-bg" id="menuBg" style="background-image:url('assets/фон.png')"></div>
+    <div class="screen-bg" id="menuBg" style="background-image:url('assets/фон_меню.png')"></div>
     <div class="ambient-orb"></div>
 
     <header class="topbar">
@@ -60,38 +67,48 @@
     </div>
 
     <nav class="menu-grid">
-      <button class="nav-card" data-goto="shop" style="--bg:url('assets/11.png')">
+      <button class="nav-card" data-goto="shop" style="--bg:url('assets/фон_модели_DianaLovis.png')">
         <span class="card-shade"></span>
         <span class="card-ico ico-shop"></span>
         <span class="card-title">Магазин событий</span>
       </button>
-      <button class="nav-card" data-goto="mines" style="--bg:url('assets/мины.jpg')">
+      <button class="nav-card" data-goto="mines" style="--bg:url('assets/фон_игры_мины.jpg')">
         <span class="card-shade"></span>
         <span class="card-ico ico-mines"></span>
         <span class="card-title">Мины</span>
       </button>
-      <button class="nav-card" data-goto="cells" style="--bg:url('assets/фонячейки.jpg')">
+      <button class="nav-card" data-goto="cells" style="--bg:url('assets/фон_игры_ячейки.jpg')">
         <span class="card-shade"></span>
         <span class="card-ico ico-cells"></span>
         <span class="card-title">Ячейки</span>
         <span class="card-badge" data-badge="keys">0 🔑</span>
       </button>
-      <button class="nav-card nav-cases" data-goto="cases" style="--bg:url('assets/cases-bg.jpg')">
+      <button class="nav-card nav-cases" data-goto="cases" style="--bg:url('assets/фон_игры_кейсы.jpg')">
         <span class="card-shade"></span>
         <span class="card-ico card-emoji">🎁</span>
         <span class="card-title">Кейсы</span>
       </button>
-      <button class="nav-card nav-wheel" data-goto="wheel" style="--bg:url('assets/wheel-full.jpg')">
+      <button class="nav-card nav-wheel" data-goto="wheel" style="--bg:url('assets/фон_игры_колесо.jpg')">
         <span class="card-shade"></span>
         <span class="card-ico card-emoji">🎡</span>
         <span class="card-title">Колесо</span>
       </button>
-      <button class="nav-card nav-cups" data-goto="cups" style="--bg:url('assets/cups-bg.jpg')">
+      <button class="nav-card nav-cups" data-goto="cups" style="--bg:url('assets/фон_игры_напёрстки.jpg')">
         <span class="card-shade"></span>
         <span class="card-ico card-emoji">🥤</span>
         <span class="card-title">Напёрстки</span>
       </button>
-      <button class="nav-card nav-market" style="--bg:url('assets/рынок.jpg')">
+      <button class="nav-card nav-dice" data-goto="dice" style="--bg:url('assets/фон_игры_кости.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico card-emoji">🎲</span>
+        <span class="card-title">Кости удачи</span>
+      </button>
+      <button class="nav-card nav-darts" data-goto="darts" style="--bg:url('assets/фон_игры_дартс.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico card-emoji">🎯</span>
+        <span class="card-title">Дартс</span>
+      </button>
+      <button class="nav-card nav-market" style="--bg:url('assets/фон_игры_рынок.jpg')">
         <span class="card-shade"></span>
         <span class="card-ico ico-market"></span>
         <span class="card-title">Рынок</span>
@@ -107,7 +124,7 @@
 
   <!-- ===================== МАГАЗИН ===================== -->
   <section id="screen-shop" class="screen">
-    <div class="screen-bg dim" style="background-image:url('assets/11.png')"></div>
+    <div class="screen-bg dim" style="background-image:url('assets/фон_модели_DianaLovis.png')"></div>
     <header class="subbar">
       <button class="back-btn" data-go="menu">←</button>
       <h2>Магазин событий</h2>
@@ -120,7 +137,7 @@
 
   <!-- ===================== МИНЫ ===================== -->
   <section id="screen-mines" class="screen">
-    <div class="screen-bg dim" style="background-image:url('assets/мины.jpg')"></div>
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_мины.jpg')"></div>
     <header class="subbar">
       <button class="back-btn" data-go="menu">←</button>
       <h2>Мины</h2>
@@ -155,7 +172,7 @@
 
   <!-- ===================== ЯЧЕЙКИ ===================== -->
   <section id="screen-cells" class="screen">
-    <div class="screen-bg dim" style="background-image:url('assets/фонячейки.jpg')"></div>
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_ячейки.jpg')"></div>
     <header class="subbar">
       <button class="back-btn" data-go="menu">←</button>
       <h2>Ячейки</h2>
@@ -177,7 +194,7 @@
 
   <!-- ===================== КЕЙСЫ ===================== -->
   <section id="screen-cases" class="screen">
-    <div class="screen-bg dim" style="background-image:url('assets/cases-bg.jpg')"></div>
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_кейсы.jpg')"></div>
     <header class="subbar">
       <button class="back-btn" data-go="menu">←</button>
       <h2>Кейсы</h2>
@@ -191,7 +208,7 @@
 
   <!-- ===================== КОЛЕСО ===================== -->
   <section id="screen-wheel" class="screen">
-    <div class="screen-bg dim" style="background-image:url('assets/wheel-full.jpg')"></div>
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_колесо.jpg')"></div>
     <header class="subbar">
       <button class="back-btn" data-go="menu">←</button>
       <h2>Колесо удачи</h2>
@@ -213,7 +230,7 @@
 
   <!-- ===================== НАПЁРСТКИ ===================== -->
   <section id="screen-cups" class="screen">
-    <div class="screen-bg dim" style="background-image:url('assets/cups-bg.jpg')"></div>
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_напёрстки.jpg')"></div>
     <header class="subbar">
       <button class="back-btn" data-go="menu">←</button>
       <h2>Напёрстки</h2>
@@ -237,9 +254,57 @@
     </div>
   </section>
 
+  <!-- ===================== КОСТИ ===================== -->
+  <section id="screen-dice" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_кости.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Кости удачи</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="diceBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="dice-stage">
+        <div class="die" id="dice1"></div>
+        <div class="die" id="dice2"></div>
+      </div>
+      <div class="dice-choices">
+        <button class="dice-choice" data-pick="low">Меньше 7<b>x1.9</b></button>
+        <button class="dice-choice" data-pick="seven">Ровно 7<b>x4.5</b></button>
+        <button class="dice-choice" data-pick="high">Больше 7<b>x1.9</b></button>
+      </div>
+      <div class="mines-row" style="margin-top:14px">
+        <label>Ставка</label>
+        <input id="diceBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
+      </div>
+      <button class="solid-btn purple" id="diceRoll">Бросить кости</button>
+      <p class="cells-note">Выбери исход и бросай. Меньше/больше 7 — x1.9, ровно 7 — x4.5. Выигрывать трудно, но можно.</p>
+    </div>
+  </section>
+
+  <!-- ===================== ДАРТС ===================== -->
+  <section id="screen-darts" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_дартс.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Дартс</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="dartsBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="darts-stage" id="dartsBoard">
+        <div class="dart" id="dart">📍</div>
+      </div>
+      <div class="mines-row" style="margin-top:16px">
+        <label>Ставка</label>
+        <input id="dartsBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
+      </div>
+      <button class="solid-btn purple" id="dartsThrow">Бросить дротик</button>
+      <p class="cells-note">В яблочко — x8, ближе к центру — x2.5, дальше — меньше. Попасть в центр трудно, но можно.</p>
+    </div>
+  </section>
+
   <!-- ===================== ПОДАРОК ===================== -->
   <section id="screen-gift" class="screen">
-    <div class="screen-bg dim" style="background-image:url('assets/фон.png')"></div>
+    <div class="screen-bg dim" style="background-image:url('assets/фон_меню.png')"></div>
     <header class="subbar">
       <button class="back-btn" data-go="menu">←</button>
       <h2>Ежедневный подарок</h2>
@@ -387,6 +452,6 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app.js?v=30"></script>
+<script src="app.js?v=31"></script>
 </body>
 </html>

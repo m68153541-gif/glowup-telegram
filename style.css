@@ -72,22 +72,15 @@ canvas{display:block}
 
 /* НФТ рядом с ником — полноценная 3D модель, круглая, без фона */
 .nft-chip{
-  position:relative;width:52px;height:52px;flex:none;cursor:pointer;
-  border-radius:50%;overflow:hidden;
+  position:relative;width:104px;height:104px;flex:none;cursor:pointer;
+  border-radius:0;overflow:visible;
   background:transparent;border:none;
   transition:transform .18s;
 }
-.nft-chip::before{ /* мягкое свечение краёв (зелёное по умолчанию) */
-  content:"";position:absolute;inset:-3px;border-radius:50%;
-  box-shadow:0 0 24px 5px rgba(126,224,163,.6), inset 0 0 16px rgba(126,224,163,.4);
-  pointer-events:none;
-}
-.nft-chip.gold::before{ /* №1 — золотая подсветка */
-  box-shadow:0 0 14px 3px rgba(255,215,106,.7), inset 0 0 10px rgba(255,215,106,.45);
-}
+@keyframes nftFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
 .nft-chip:active{transform:scale(.93)}
 .nft-chip canvas{width:100%;height:100%}
-.nft-chip #nftCanvas{position:absolute;inset:0;width:100%;height:100%;background:transparent!important}
+.nft-chip #nftCanvas{position:absolute;inset:0;width:100%;height:100%;background:transparent!important;animation:nftFloat 3.4s ease-in-out infinite}
 .nft-chip #nftCanvas>.view3d,.nft-chip #nftCanvas>div{width:100%;height:100%}
 .nft-chip-badge{
   position:absolute;left:50%;transform:translateX(-50%);bottom:-7px;
@@ -713,3 +706,62 @@ canvas{display:block}
 .cup.peek .cup-ball,.cup.reveal .cup-ball{opacity:1;transform:translateX(-50%) translateY(0)}
 .cup.hit .cup-ico{filter:drop-shadow(0 0 18px rgba(126,224,163,.95))}
 .cup:disabled{cursor:default}
+
+/* ---------- ФОНЫ ПРОСМОТРА 3D (свой у каждой модели) ---------- */
+.viewer-stage.bg1{background:#ffffff url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44'><path d='M22 8l3.2 7.3 8 .7-6.1 5.2 1.9 8-7-4.5-7 4.5 1.9-8-6.1-5.2 8-.7z' fill='rgba(0,0,0,0.10)'/></svg>") repeat;background-size:44px 44px}
+.viewer-stage.bg2{background:#fde7ef url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='44' height='44'><path d='M22 32s-11-6.5-11-13.5a5.8 5.8 0 0 1 11-2.6 5.8 5.8 0 0 1 11 2.6C33 25.5 22 32 22 32z' fill='rgba(255,110,165,0.22)'/></svg>") repeat;background-size:44px 44px}
+.viewer-stage.bg3{background:#0f1b34 url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='54' height='54'><path d='M27 6l4 16 16 4-16 4-4 16-4-16-16-4 16-4z' fill='rgba(255,215,106,0.20)'/></svg>") repeat;background-size:54px 54px}
+
+/* ---------- КОСТИ ---------- */
+.dice-stage{display:flex;justify-content:center;gap:18px;padding:14px 0 16px}
+.die{
+  width:74px;height:74px;border-radius:16px;padding:9px;box-sizing:border-box;
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);gap:5px;
+  background:linear-gradient(160deg,#ffffff,#d9dce6);border:1px solid rgba(255,255,255,.6);
+  box-shadow:0 10px 26px rgba(0,0,0,.45),inset 0 -6px 12px rgba(0,0,0,.12);
+}
+.die.rolling{animation:dieShake .12s linear infinite}
+@keyframes dieShake{0%,100%{transform:rotate(-6deg) translateY(0)}50%{transform:rotate(6deg) translateY(-4px)}}
+.pip{width:100%;height:100%;border-radius:50%;background:#1a1a2e}
+.pip.off{background:transparent}
+.dice-choices{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:4px}
+.dice-choice{
+  border:1px solid var(--line);background:var(--panel);color:var(--muted);
+  font-family:inherit;font-weight:800;font-size:12px;padding:12px 6px;border-radius:16px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;transition:all .18s;
+}
+.dice-choice b{color:var(--gold);font-size:13px}
+.dice-choice.active{color:#101018;background:linear-gradient(120deg,#ffd76a,#ff9d3f);border-color:transparent;box-shadow:0 8px 24px rgba(255,180,80,.3)}
+.dice-choice.active b{color:#3a2400}
+.dice-choice:active{transform:scale(.95)}
+
+/* ---------- ДАРТС ---------- */
+.darts-stage{
+  position:relative;width:min(80vw,310px);height:min(80vw,310px);margin:8px auto 4px;border-radius:50%;
+  background:radial-gradient(circle at 50% 50%,
+      #e24b4b 0 11%, #f4f4f6 11% 22%, #e24b4b 22% 33%, #2fa36b 33% 44%,
+      #f4f4f6 44% 55%, #2b2b45 55% 100%);
+  border:6px solid #1a1a26;
+  box-shadow:0 16px 40px rgba(0,0,0,.55),inset 0 0 30px rgba(0,0,0,.5);
+}
+.darts-stage::after{content:"";position:absolute;inset:2%;border-radius:50%;border:1px dashed rgba(255,255,255,.12);pointer-events:none}
+.dart{
+  position:absolute;left:50%;top:92%;transform:translate(-50%,-50%);
+  font-size:26px;z-index:3;
+  transition:left .7s cubic-bezier(.2,.8,.2,1),top .7s cubic-bezier(.2,.8,.2,1);
+  filter:drop-shadow(0 3px 6px rgba(0,0,0,.6));
+}
+
+/* ---------- ЭКРАН ЗАГРУЗКИ ---------- */
+#loadingScreen{
+  position:fixed;inset:0;z-index:500;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(120% 90% at 70% 10%,#1a1a2e 0%,#0a0a0f 55%);
+  transition:opacity .5s ease,visibility .5s ease;
+}
+#loadingScreen.hidden{opacity:0;visibility:hidden;pointer-events:none}
+.load-inner{display:flex;flex-direction:column;align-items:center;gap:18px}
+.load-logo{font-weight:900;font-size:44px;letter-spacing:.02em;line-height:.92}
+.load-logo span{background:linear-gradient(120deg,#fff,#cfc8ff,#5fe3e0);-webkit-background-clip:text;background-clip:text;color:transparent;filter:drop-shadow(0 0 22px rgba(165,190,255,.35))}
+.load-spinner{width:46px;height:46px;border-radius:50%;border:4px solid rgba(255,255,255,.12);border-top-color:var(--cyan);border-right-color:var(--violet);animation:spin 1s linear infinite}
+.load-tip{font-size:12px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;animation:loadPulse 1.6s ease-in-out infinite}
+@keyframes loadPulse{0%,100%{opacity:.5}50%{opacity:1}}

@@ -28,9 +28,9 @@ const DEFAULT_STATE = {
 };
 
 const MODEL_CATALOG = [
-  { id:'1', name:'DianaLovis', rarity:'legendary', price:1000, model:'assets/1.glb', image:'assets/11.png' },
-  { id:'2', name:'LerwaxiMi', rarity:'epic',      price:2500, model:'assets/2.glb', image:'assets/22.png' },
-  { id:'3', name:'Sweaty',     rarity:'common',   price:900,  model:'assets/3.glb', image:'assets/33.png' },
+  { id:'1', name:'DianaLovis', rarity:'legendary', price:1000, model:'assets/DianaLovis.glb', image:'assets/фон_модели_DianaLovis.png' },
+  { id:'2', name:'LerwaxiMi', rarity:'epic',      price:2500, model:'assets/LerwaxiMi.glb', image:'assets/фон_модели_LerwaxiMi.png' },
+  { id:'3', name:'Sweaty',     rarity:'common',   price:900,  model:'assets/Sweaty.glb', image:'assets/фон_модели_Sweaty.png' },
 ];
 
 // ---------- Ячейки: 30, два больших приза 300-500, остальные мелкие ----------
@@ -126,6 +126,10 @@ const el = {
   wheelBalance:$('#wheelBalance'), wheelBet:$('#wheelBet'), wheelSpin:$('#wheelSpin'), wheel:$('#wheel'),
   // напёрстки
   cupsBalance:$('#cupsBalance'), cupsBet:$('#cupsBet'), cupsStart:$('#cupsStart'), cupsRow:$('#cupsRow'), cupsHint:$('#cupsHint'),
+  // кости
+  diceBalance:$('#diceBalance'), dice1:$('#dice1'), dice2:$('#dice2'), diceBet:$('#diceBet'), diceRoll:$('#diceRoll'),
+  // дартс
+  dartsBalance:$('#dartsBalance'), dartsBoard:$('#dartsBoard'), dart:$('#dart'), dartsBet:$('#dartsBet'), dartsThrow:$('#dartsThrow'),
   toasts:$('#toasts'),
 };
 
@@ -186,6 +190,8 @@ function renderBalance(){
   if (el.wheelBalance) el.wheelBalance.textContent = state.stars;
   if (el.cupsBalance) el.cupsBalance.textContent = state.stars;
   if (el.minesBalance) el.minesBalance.textContent = state.stars;
+  if (el.diceBalance) el.diceBalance.textContent = state.stars;
+  if (el.dartsBalance) el.dartsBalance.textContent = state.stars;
   const badge = document.querySelector('[data-badge="keys"]');
   if (badge) badge.textContent = state.keys + ' 🔑';
 }
@@ -202,6 +208,8 @@ function goto(name){
   if (name==='cases') renderCases();
   if (name==='wheel') renderWheel();
   if (name==='cups') renderCups();
+  if (name==='dice') renderDice();
+  if (name==='darts') renderDarts();
   if (name==='gift') renderGiftScreen();
   if (name==='menu') renderGiftFab();
   // нативная кнопка «назад» Telegram на подэкранах
@@ -348,14 +356,23 @@ function makeViewer(container, modelId, opts){
     if (opts.stage && opts.stage.onerror) opts.stage.onerror();
   });
 
-  const loop = ()=>{
+  let lastT=0;
+  const loop = (t)=>{
     if(!raf) return;
     requestAnimationFrame(loop);
+    if(document.hidden) return;
+    if(opts.mini){
+      const menu=document.getElementById('screen-menu');
+      if(menu && !menu.classList.contains('active')) return;  // не рендерим НФТ вне меню
+      if(lastT && ((t||0)-lastT) < 30) return;                // ~30 fps для чипа
+    }
+    const dt = lastT ? Math.min((t||0)-lastT, 120) : 16.67;
+    lastT = t||0;
     if(controls) controls.update();
-    else if(group && opts.spin) group.rotation.y += 0.006;
+    else if(group && opts.spin) group.rotation.y += 0.006 * (dt/16.67);
     renderer.render(scene,camera);
   };
-  loop();
+  requestAnimationFrame(loop);
 
   return { dispose, el: renderer.domElement };
 }
@@ -403,6 +420,7 @@ function renderNFT(){
 function openViewer(modelId){
   const m=model(modelId); if(!m) return;
   el.viewerTitle.textContent = m.name;
+  el.viewerStage.className = 'viewer-stage bg' + modelId;   // свой фон под модель
   el.viewerLoading.style.display='flex';
   el.viewerModal.classList.add('open');
   el.viewerModal._v=undefined;
@@ -880,6 +898,7 @@ function pickPrize(c){
 function prizeLabel(p){
   return p.type==='key' ? (p.count+' 🔑') : (p.amount+' ⭐');
 }
+const CASE_IMG = { bronze:'assets/кейс_бронзовый.jpg', silver:'assets/кейс_серебряный.jpg', gold:'assets/кейс_золотой.jpg' };
 function renderCases(){
   if(!el.caseGrid) return;
   el.caseGrid.innerHTML='';
@@ -887,7 +906,7 @@ function renderCases(){
     const d=document.createElement('div');
     d.className='case-card'; d.style.setProperty('--accent', c.accent);
     d.innerHTML = `
-      <div class="case-thumb"><img src="assets/case-${c.id}.jpg" alt=""></div>
+      <div class="case-thumb"><img src="${CASE_IMG[c.id]}" alt=""></div>
       <div class="case-meta">
         <div class="case-name">${c.name}</div>
         <div class="case-sub">${c.sub}</div>
@@ -1060,6 +1079,89 @@ function pickCup(cupIndex){
 }
 
 /* =====================================================================
+   КОСТИ УДАЧИ (меньше/больше 7 — x1.9, ровно 7 — x4.5)
+   ===================================================================== */
+const DICE_PIPS = { 1:[4], 2:[0,8], 3:[0,4,8], 4:[0,2,6,8], 5:[0,2,4,6,8], 6:[0,2,3,5,6,8] };
+function dieHTML(v){
+  let h='';
+  const on = DICE_PIPS[v]||[];
+  for(let i=0;i<9;i++) h += '<span class="pip'+(on.includes(i)?'':' off')+'"></span>';
+  return h;
+}
+function renderDie(node,v){ if(node) node.innerHTML=dieHTML(v); }
+let dicePick='high', diceBusy=false;
+function renderDice(){
+  if(el.dice1 && !el.dice1.innerHTML) renderDie(el.dice1,1);
+  if(el.dice2 && !el.dice2.innerHTML) renderDie(el.dice2,1);
+  document.querySelectorAll('.dice-choice').forEach(b=>b.classList.toggle('active', b.dataset.pick===dicePick));
+}
+function rollDice(){
+  if(diceBusy) return;
+  const bet=parseInt(el.diceBet.value,10);
+  if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
+  if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
+  state.stars-=bet; save(); renderBalance();
+  diceBusy=true;
+  const d1=el.dice1, d2=el.dice2;
+  d1.classList.add('rolling'); d2.classList.add('rolling');
+  const spin=setInterval(()=>{ renderDie(d1,1+Math.floor(Math.random()*6)); renderDie(d2,1+Math.floor(Math.random()*6)); },80);
+  setTimeout(()=>{
+    clearInterval(spin);
+    d1.classList.remove('rolling'); d2.classList.remove('rolling');
+    const v1=1+Math.floor(Math.random()*6), v2=1+Math.floor(Math.random()*6);
+    renderDie(d1,v1); renderDie(d2,v2);
+    const sum=v1+v2;
+    let win=false, mult=1.9;
+    if(dicePick==='low') win = sum<7;
+    else if(dicePick==='high') win = sum>7;
+    else { mult=4.5; win = sum===7; }
+    const payout = win ? Math.round(bet*mult) : 0;
+    if(win){ state.stars+=payout; save(); renderBalance(); toast('Выпало '+v1+'+'+v2+'='+sum+'. Победа +'+payout+' ⭐', true); }
+    else toast('Выпало '+v1+'+'+v2+'='+sum+'. Не угадал');
+    diceBusy=false;
+  }, 1200);
+}
+
+/* =====================================================================
+   ДАРТС (яблочко x8 … мимо x0)
+   ===================================================================== */
+let dartsBusy=false;
+function renderDarts(){
+  if(el.dart){ el.dart.style.transition='none'; el.dart.style.left='50%'; el.dart.style.top='92%'; el.dart.style.opacity='0'; }
+}
+function throwDart(){
+  if(dartsBusy) return;
+  const bet=parseInt(el.dartsBet.value,10);
+  if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
+  if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
+  state.stars-=bet; save(); renderBalance();
+  dartsBusy=true;
+  const dart=el.dart;
+  dart.style.transition='none'; dart.style.left='50%'; dart.style.top='92%'; dart.style.opacity='1';
+  void dart.offsetWidth;
+  dart.style.transition='left .7s cubic-bezier(.2,.8,.2,1), top .7s cubic-bezier(.2,.8,.2,1)';
+  const rr=Math.sqrt(Math.random());          // равномерно по площади
+  const ang=Math.random()*Math.PI*2;
+  const R=44;                                  // % от центра
+  dart.style.left=(50 + Math.cos(ang)*rr*R)+'%';
+  dart.style.top =(50 + Math.sin(ang)*rr*R)+'%';
+  let mult=0, label='';
+  if(rr<0.12){mult=8;label='Яблочко';}
+  else if(rr<0.35){mult=2.5;label='Центр';}
+  else if(rr<0.6){mult=1.2;label='Среднее';}
+  else if(rr<0.9){mult=0.6;label='Край';}
+  else {mult=0;label='Мимо';}
+  setTimeout(()=>{
+    const payout=Math.round(bet*mult);
+    if(payout>0){ state.stars+=payout; save(); renderBalance(); }
+    if(mult>=1) toast(label+'! x'+mult+' +'+payout+' ⭐', true);
+    else if(mult>0) toast(label+': x'+mult+' — '+payout+' ⭐ (меньше ставки)');
+    else toast('Мимо! Дротик не попал в цель');
+    dartsBusy=false;
+  }, 800);
+}
+
+/* =====================================================================
    СОБЫТИЯ
    ===================================================================== */
 document.addEventListener('click',(e)=>{
@@ -1110,6 +1212,13 @@ if(el.cupsRow) [...el.cupsRow.querySelectorAll('.cup')].forEach((cup,idx)=>{
   cup.addEventListener('click',()=>pickCup(idx));
 });
 
+// кости
+if(el.diceRoll) el.diceRoll.addEventListener('click',rollDice);
+document.querySelectorAll('.dice-choice').forEach(b=>b.addEventListener('click',()=>{ dicePick=b.dataset.pick; renderDice(); }));
+
+// дартс
+if(el.dartsThrow) el.dartsThrow.addEventListener('click',throwDart);
+
 // ячейки: кнопки
 el.openOneBtn && el.openOneBtn.addEventListener('click',()=>{
   if(state.keys>0){
@@ -1145,6 +1254,8 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
    СТАРТ
    ===================================================================== */
 (async function boot(){
+  const hideLoad=()=>{ const ls=document.getElementById('loadingScreen'); if(ls) ls.classList.add('hidden'); };
+  setTimeout(hideLoad, 3800);            // страховка, если что-то задержится
   load(); initTelegram();
   renderBalance(); renderNFT(); renderCells();
   renderGiftFab();
@@ -1152,6 +1263,7 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
   renderNFT();
   renderShop();
   renderMines();
+  setTimeout(hideLoad, 350);
   // ежесекундное обновление подарка (иконка в меню + таймер на экране)
   setInterval(()=>{
     const gs=document.getElementById('screen-gift');
