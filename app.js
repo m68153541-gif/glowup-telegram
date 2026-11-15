@@ -9,6 +9,8 @@ const CODE_REWARD = 1000;
 const KEY_PRICE   = 100;
 const KEY_PACKS   = [ {n:1, price:100}, {n:5, price:500}, {n:10, price:1000} ];
 const DONATE_BOT  = '@gryzikkk200';
+// Токен Telegram-бота (тестовый). Используется для серверных вызовов Telegram Bot API.
+const BOT_TOKEN   = '9079841137:AAGFVzPLH2-3bgsYDu-yBL587CzbEXTQ1g4';
 
 const DEFAULT_STATE = {
   stars: 0,
