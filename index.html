@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>GlowUp</title>
+<meta name="theme-color" content="#0a0a0f" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet" />
+<script type="importmap">
+{
+  "imports": {
+    "three": "./assets/vendor/three.module.js",
+    "three/addons/": "./assets/vendor/"
+  }
+}
+</script>
+<link rel="stylesheet" href="style.css?v=5" />
+</head>
+<body>
+<div id="app">
+  <!-- ===================== ГЛАВНОЕ МЕНЮ ===================== -->
+  <section id="screen-menu" class="screen active">
+    <div class="screen-bg" id="menuBg" style="background-image:url('assets/фон.png')"></div>
+    <div class="ambient-orb"></div>
+
+    <header class="topbar">
+      <div class="userchip">
+        <div class="user-avatar" id="avatar">
+          <img id="avatarImg" alt="" style="display:none" />
+          <span class="ph" id="avatarPh">З</span>
+        </div>
+        <div class="user-meta">
+          <span class="user-name" id="userName">Зюзя</span>
+          <span class="user-handle" id="userHandle">@zugya</span>
+        </div>
+      </div>
+      <!-- НФТ у ника: полноценная 3D, клик -> просмотр -->
+      <div class="nft-chip" id="nftChip" data-id="" title="Открыть НФТ">
+        <div id="nftCanvas"></div>
+        <span class="nft-chip-badge" id="nftChipBadge">НФТ</span>
+      </div>
+      <button class="bal-btn" id="balBtn">
+        <span class="bal-icon"></span>
+        <span class="bal-val" id="balVal">0</span>
+      </button>
+    </header>
+
+    <div class="hero">
+      <h1 class="logo">Glow<span>Up</span></h1>
+      <p class="tagline">3D НФТ и игры</p>
+    </div>
+
+    <nav class="menu-grid">
+      <button class="nav-card" data-goto="shop" style="--bg:url('assets/11.png')">
+        <span class="card-shade"></span>
+        <span class="card-ico ico-shop"></span>
+        <span class="card-title">Магазин событий</span>
+      </button>
+      <button class="nav-card" data-goto="mines" style="--bg:url('assets/22.png')">
+        <span class="card-shade"></span>
+        <span class="card-ico ico-mines"></span>
+        <span class="card-title">Мины</span>
+      </button>
+      <button class="nav-card" data-goto="cells" style="--bg:url('assets/фонячейки.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico ico-cells"></span>
+        <span class="card-title">Ячейки</span>
+        <span class="card-badge" data-badge="keys">0 🔑</span>
+      </button>
+      <button class="nav-card nav-market" style="--bg:url('assets/рынок.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico ico-market"></span>
+        <span class="card-title">Рынок</span>
+        <span class="card-soon">Скоро</span>
+      </button>
+    </nav>
+
+    <footer class="menu-foot">
+      <button class="ghost-btn" data-goto="donate">Награды</button>
+      <button class="ghost-btn" data-goto="howto">Как играть</button>
+    </footer>
+  </section>
+
+  <!-- ===================== МАГАЗИН ===================== -->
+  <section id="screen-shop" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/11.png')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Магазин событий</h2>
+      <button class="bal-btn small" id="balBtnShop"><span class="bal-icon"></span><span class="bal-val" id="balValShop">0</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="card-grid" id="shopGrid"></div>
+    </div>
+  </section>
+
+  <!-- ===================== МИНЫ ===================== -->
+  <section id="screen-mines" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/мины.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Мины</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="minesBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <p class="cells-note">Ставь звёзды, открывай клетки и уходи от мин. Чем больше откроешь — тем больше множитель.</p>
+      <div class="mines-controls">
+        <div class="mines-row">
+          <label>Ставка</label>
+          <input id="minesBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
+        </div>
+        <div class="mines-row">
+          <label>Мины</label>
+          <div class="mine-count">
+            <button class="mine-count-btn active" data-mines="1">1</button>
+            <button class="mine-count-btn" data-mines="3">3</button>
+            <button class="mine-count-btn" data-mines="5">5</button>
+          </div>
+        </div>
+        <button class="solid-btn" id="minesStart">Играть</button>
+      </div>
+      <div class="mines-board">
+        <div class="mines-grid" id="minesGrid"></div>
+        <div class="mines-footer">
+          <div class="mines-mult">Множитель: <b id="minesMultiplier">x1.0</b></div>
+          <button class="solid-btn purple" id="minesCashout" disabled>Забрать выигрыш</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ЯЧЕЙКИ ===================== -->
+  <section id="screen-cells" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фонячейки.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Ячейки</h2>
+      <button class="keys-pill" id="keyBtnTop"><span id="keyCountTop">0</span> 🔑 <span class="keys-plus">+</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="cell-timer-row">
+        <span class="cell-timer" id="cellTimer">Обновление через: --:--:--</span>
+      </div>
+      <p class="cells-note">30 ячеек. Внутри — ключи, звёзды и два джекпота по 300–500 ⭐! Ячейки обновляются каждый день в 14:00 (МСК).</p>
+      <div class="cells-rack" id="cellsRack"></div>
+      <div class="cells-actions">
+        <button class="solid-btn purple" id="openOneBtn">Открыть ячейку (1 🔑)</button>
+        <button class="solid-btn" id="keyShopBtn">Купить ключи</button>
+        <button class="ghost-btn wide" id="cellResetBtn">Обновить ячейки (300 ⭐)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== НАГРАДЫ ===================== -->
+  <section id="screen-donate" class="screen">
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Награды</h2>
+    </header>
+    <div class="screen-body">
+      <div class="reward-card">
+        <p class="reward-desc">Получи подарок на баланс — введите код активации.</p>
+        <p class="reward-hint">Демо-код: <b>0306</b> на 1000 звёзд.</p>
+        <input id="codeInput" class="code-input" type="password" inputmode="numeric" placeholder="Код активации" />
+        <button class="solid-btn" id="codeApplyBtn">Активировать</button>
+      </div>
+      <button class="ghost-btn wide" id="donateBtn">Поддержать проект (звёзды Telegram)</button>
+    </div>
+  </section>
+
+  <!-- ===================== КАК ИГРАТЬ ===================== -->
+  <section id="screen-howto" class="screen">
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Как играть</h2>
+    </header>
+    <div class="screen-body">
+      <div class="howto-card">
+        <h3>Магазин событий</h3>
+        <p>Покупай 3D-модели за звёзды. Купленная модель встаёт рядом с ником в 3D. «Посмотреть 3D» — покрути на стенде.</p>
+        <h3>Мины</h3>
+        <p>Ставь звёзды, выбирай 1/3/5 мин и открывай клетки. Чем больше откроешь — тем выше множитель. Подорвёшься — проиграешь ставку.</p>
+        <h3>Ячейки</h3>
+        <p>Открывай ячейки ключами. Внутри ключи, звёзды и джекпоты 300–500 ⭐. Ячейки обновляются каждый день в 14:00.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ===================== МОДАЛКА НФТ ===================== -->
+<div id="nftModal" class="modal">
+  <div class="modal-sheet">
+    <div class="modal-media" id="modalMedia"></div>
+    <div class="modal-info">
+      <h3 id="modalTitle">НФТ</h3>
+      <p class="modal-price" id="modalPrice"></p>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+    <button class="modal-close" id="modalClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== ПРОСМОТР 3D ===================== -->
+<div id="viewerModal" class="modal">
+  <div class="viewer-sheet">
+    <div class="viewer-stage" id="viewerStage">
+      <div class="viewer-loading" id="viewerLoading">Загрузка 3D модели…</div>
+    </div>
+    <div class="viewer-info">
+      <h3 id="viewerTitle">—</h3>
+      <p class="viewer-tip">Тяни, чтобы вертеть. Двойной клик — приблизить.</p>
+    </div>
+    <button class="modal-close" id="viewerClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== МАГАЗИН КЛЮЧЕЙ ===================== -->
+<div id="keyShopModal" class="modal">
+  <div class="modal-sheet">
+    <div class="modal-info center">
+      <div class="key-hero">🔑</div>
+      <h3>Магазин ключей</h3>
+      <p class="reward-desc">Ключ открывает одну ячейку в игре «Ячейки».</p>
+      <p class="reward-hint">Цена: <b>100 звёзд</b> за ключ. Баланс: <b id="keyShopBalance">0</b> ⭐</p>
+      <div class="key-pack-row">
+        <button class="key-pack" data-pack="1"><b>1</b><span>100 ⭐</span></button>
+        <button class="key-pack" data-pack="5"><b>5</b><span>500 ⭐</span></button>
+        <button class="key-pack" data-pack="10"><b>10</b><span>1000 ⭐</span></button>
+      </div>
+    </div>
+    <button class="modal-close" id="keyShopClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== ПРИЗ ===================== -->
+<div id="prizeModal" class="modal">
+  <div class="prize-stage">
+    <div class="prize-burst"></div>
+    <div class="prize-item" id="prizeItem">⭐</div>
+    <div class="prize-text" id="prizeText">+30 звёзд</div>
+  </div>
+  <button class="prize-continue" id="prizeContinue">Продолжить</button>
+</div>
+
+<!-- ===================== ВВОД ЦЕНЫ ===================== -->
+<div id="priceModal" class="modal">
+  <div class="modal-sheet">
+    <div class="modal-info center">
+      <h3>Продажа</h3>
+      <p class="reward-desc">Рынок ещё в разработке. Запишем цену для будущей продажи.</p>
+      <input id="priceInput" class="code-input" type="number" inputmode="numeric" value="400" min="1" />
+      <div class="modal-actions">
+        <button class="action-btn buy" id="priceOkBtn">Продать</button>
+        <button class="action-btn dark" id="priceCancelBtn">Отмена</button>
+      </div>
+    </div>
+    <button class="modal-close" id="priceClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== ТОСТЫ ===================== -->
+<div id="toasts"></div>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<script src="app.js?v=26"></script>
+</body>
+</html>
