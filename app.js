@@ -9,6 +9,8 @@ const CODE_REWARD = 1000;
 const KEY_PRICE   = 100;
 const KEY_PACKS   = [ {n:1, price:100}, {n:5, price:500}, {n:10, price:1000} ];
 const DONATE_BOT  = '@gryzikkk200';
+const GIFT_INTERVAL = 24*60*60*1000;  // раз в 24 часа
+const GIFT_KEYS     = 3;               // 3 ключа за подарок
 // Токен Telegram-бота (тестовый). Используется для серверных вызовов Telegram Bot API.
 const BOT_TOKEN   = '9079841137:AAGFVzPLH2-3bgsYDu-yBL587CzbEXTQ1g4';
 
@@ -22,6 +24,7 @@ const DEFAULT_STATE = {
   marketLock: {},       // modelId -> ts когда можно выставить на рынок
   cellResetAt: 0,       // ts автоматического сброса ячеек (14:00 МСК)
   cellForceReset: false,
+  gift: { lastClaim: 0 },   // ts последнего получения ежедневного подарка
 };
 
 const MODEL_CATALOG = [
@@ -114,6 +117,15 @@ const el = {
   prizeModal:$('#prizeModal'), prizeItem:$('#prizeItem'), prizeText:$('#prizeText'), prizeContinue:$('#prizeContinue'),
   minesBet:$('#minesBet'), minesMineBtns:null, minesGrid:$('#minesGrid'), minesCashout:$('#minesCashout'),
   minesStart:$('#minesStart'), minesBalance:$('#minesBalance'), minesMultiplier:$('#minesMultiplier'),
+  // подарок
+  giftFab:$('#giftFab'), giftClaimBtn:$('#giftClaimBtn'), giftTimer:$('#giftTimer'), giftHero:$('#giftHero'),
+  // кейсы
+  casesBalance:$('#casesBalance'), caseGrid:$('#caseGrid'),
+  caseModal:$('#caseModal'), caseReel:$('#caseReel'), caseResult:$('#caseResult'), caseClaim:$('#caseClaim'),
+  // колесо
+  wheelBalance:$('#wheelBalance'), wheelBet:$('#wheelBet'), wheelSpin:$('#wheelSpin'), wheel:$('#wheel'),
+  // напёрстки
+  cupsBalance:$('#cupsBalance'), cupsBet:$('#cupsBet'), cupsStart:$('#cupsStart'), cupsRow:$('#cupsRow'), cupsHint:$('#cupsHint'),
   toasts:$('#toasts'),
 };
 
@@ -170,6 +182,10 @@ function renderBalance(){
   el.balVal.textContent = state.stars;
   el.balValShop.textContent = state.stars;
   el.keyCountTop.textContent = state.keys;
+  if (el.casesBalance) el.casesBalance.textContent = state.stars;
+  if (el.wheelBalance) el.wheelBalance.textContent = state.stars;
+  if (el.cupsBalance) el.cupsBalance.textContent = state.stars;
+  if (el.minesBalance) el.minesBalance.textContent = state.stars;
   const badge = document.querySelector('[data-badge="keys"]');
   if (badge) badge.textContent = state.keys + ' 🔑';
 }
@@ -183,6 +199,11 @@ function goto(name){
   if (name==='shop') renderShop();
   if (name==='cells') renderCells();
   if (name==='mines') renderMines();
+  if (name==='cases') renderCases();
+  if (name==='wheel') renderWheel();
+  if (name==='cups') renderCups();
+  if (name==='gift') renderGiftScreen();
+  if (name==='menu') renderGiftFab();
   // нативная кнопка «назад» Telegram на подэкранах
   if (name === 'menu') tgHideBack();
   else {
@@ -254,10 +275,15 @@ function makeViewer(container, modelId, opts){
   const h = Math.max(container.clientHeight||120, 60);
 
   // оптимизация для мобильных: ниже pixelRatio = легче GPU (важно в Telegram)
-  const PR = opts.mini ? 1.2 : 1.5;
+  const PR = opts.mini ? 1.5 : 2.0;
   const renderer = new THREE.WebGLRenderer({ antialias:!!opts.orbit, alpha:true, preserveDrawingBuffer:true });
   renderer.setPixelRatio(Math.max(1, Math.min(window.devicePixelRatio||1, PR)));
   renderer.setClearColor(0x000000, 0);
+  // корректный цвет и мягкий тонмаппинг — модели выглядят чище, без «грязи»
+  try{
+    if(THREE.SRGBColorSpace!==undefined) renderer.outputColorSpace = THREE.SRGBColorSpace;
+    if(THREE.ACESFilmicToneMapping!==undefined){ renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.1; }
+  }catch(_){}
   renderer.setSize(w,h);
   container.innerHTML='';
   container.appendChild(renderer.domElement);
@@ -760,6 +786,274 @@ function applyCode(){
 function donate(){ toast('Донат через бота '+DONATE_BOT); }
 
 /* =====================================================================
+   ЕЖЕДНЕВНЫЙ ПОДАРОК (3 ключа раз в 24 часа)
+   ===================================================================== */
+function giftReady(){
+  const last = (state.gift && state.gift.lastClaim) || 0;
+  if (!last) return true;                 // первый заход — подарок доступен
+  return Date.now() - last >= GIFT_INTERVAL;
+}
+function giftLeft(){
+  const last = (state.gift && state.gift.lastClaim) || 0;
+  if (!last) return 0;
+  return Math.max(0, GIFT_INTERVAL - (Date.now()-last));
+}
+function fmtHMS(ms){
+  const left=Math.max(0,ms);
+  const h=Math.floor(left/3600000), m=Math.floor((left%3600000)/60000), s=Math.floor((left%60000)/1000);
+  return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
+}
+function renderGiftFab(){
+  if(!el.giftFab) return;
+  const ready = giftReady();
+  el.giftFab.classList.toggle('ready', ready);
+  el.giftFab.title = ready ? 'Забрать подарок: 3 ключа!' : 'Подарок через '+fmtHMS(giftLeft());
+}
+function renderGiftScreen(){
+  const ready = giftReady();
+  if (el.giftClaimBtn){
+    el.giftClaimBtn.disabled = !ready;
+    el.giftClaimBtn.textContent = ready ? 'Забрать 3 ключа' : 'Уже забрано';
+  }
+  if (el.giftHero) el.giftHero.style.filter = ready ? '' : 'grayscale(.55) opacity(.7)';
+  updateGiftTimer();
+}
+function updateGiftTimer(){
+  if(!el.giftTimer) return;
+  if (giftReady()) el.giftTimer.textContent = 'Подарок ждёт тебя — забирай!';
+  else el.giftTimer.textContent = 'Следующий подарок через: '+fmtHMS(giftLeft());
+}
+function claimGift(){
+  if(!giftReady()){ toast('Подарок уже забран, приходи позже'); return; }
+  state.keys += GIFT_KEYS;
+  state.gift = { lastClaim: Date.now() };
+  save(); renderBalance(); renderGiftFab(); renderGiftScreen();
+  toast('+'+GIFT_KEYS+' 🔑 забрано!', true);
+}
+
+/* =====================================================================
+   КЕЙСЫ (звёзды и ключи, окупаемость ниже 1)
+   ===================================================================== */
+const CASES = [
+  { id:'bronze', name:'Бронзовый кейс', sub:'100 ⭐ · частые мелкие призы', price:100,
+    icon:'📦', accent:'linear-gradient(150deg,#c98a4b,#8a5a2b)',
+    prizes:[
+      {type:'stars', amount:30,  w:40, ico:'⭐'},
+      {type:'stars', amount:50,  w:25, ico:'⭐'},
+      {type:'stars', amount:70,  w:15, ico:'⭐'},
+      {type:'stars', amount:120, w:10, ico:'⭐'},
+      {type:'stars', amount:200, w:6,  ico:'⭐'},
+      {type:'stars', amount:500, w:3,  ico:'💎'},
+      {type:'key',   count:1,    w:1,  ico:'🔑'},
+    ]},
+  { id:'silver', name:'Серебряный кейс', sub:'500 ⭐ · шанс на крупный приз', price:500,
+    icon:'🎁', accent:'linear-gradient(150deg,#b9c2d0,#6d7688)',
+    prizes:[
+      {type:'stars', amount:150, w:35, ico:'⭐'},
+      {type:'stars', amount:250, w:25, ico:'⭐'},
+      {type:'stars', amount:350, w:18, ico:'⭐'},
+      {type:'stars', amount:550, w:10, ico:'⭐'},
+      {type:'stars', amount:800, w:7,  ico:'⭐'},
+      {type:'stars', amount:1500,w:3,  ico:'💎'},
+      {type:'key',   count:2,    w:1.5,ico:'🔑'},
+      {type:'stars', amount:5000,w:0.5,ico:'👑'},
+    ]},
+  { id:'gold', name:'Золотой кейс', sub:'1000 ⭐ · редкий джекпот 10000 ⭐', price:1000,
+    icon:'🏆', accent:'linear-gradient(150deg,#ffd76a,#c99a2b)',
+    prizes:[
+      {type:'stars', amount:350, w:30, ico:'⭐'},
+      {type:'stars', amount:550, w:25, ico:'⭐'},
+      {type:'stars', amount:750, w:18, ico:'⭐'},
+      {type:'stars', amount:1100,w:12, ico:'⭐'},
+      {type:'stars', amount:1600,w:8,  ico:'💎'},
+      {type:'stars', amount:2600,w:4,  ico:'💎'},
+      {type:'key',   count:3,    w:2,  ico:'🔑'},
+      {type:'stars', amount:10000,w:1, ico:'👑'},
+    ]},
+];
+function pickPrize(c){
+  const total=c.prizes.reduce((a,p)=>a+(p.w||0),0);
+  let r=Math.random()*total;
+  for(const p of c.prizes){ if((r-=p.w)<=0) return p; }
+  return c.prizes[c.prizes.length-1];
+}
+function prizeLabel(p){
+  return p.type==='key' ? (p.count+' 🔑') : (p.amount+' ⭐');
+}
+function renderCases(){
+  if(!el.caseGrid) return;
+  el.caseGrid.innerHTML='';
+  CASES.forEach(c=>{
+    const d=document.createElement('div');
+    d.className='case-card'; d.style.setProperty('--accent', c.accent);
+    d.innerHTML = `
+      <div class="case-thumb">${c.icon}</div>
+      <div class="case-meta">
+        <div class="case-name">${c.name}</div>
+        <div class="case-sub">${c.sub}</div>
+        <div class="case-price"><span class="ic"></span>${c.price}</div>
+      </div>
+      <button class="case-open" data-case="${c.id}">Открыть</button>`;
+    el.caseGrid.appendChild(d);
+  });
+}
+let caseBusy=false;
+function openCase(id){
+  if(caseBusy) return;
+  const c=CASES.find(x=>x.id===id); if(!c) return;
+  if(state.stars < c.price){ toast('Недостаточно звёзд'); return; }
+  state.stars -= c.price; save(); renderBalance();
+  caseBusy=true;
+  const prize = pickPrize(c);
+  const TILE_W=92, GAP=10, WIN_INDEX=34;
+  el.caseReel.style.transition='none';
+  el.caseReel.style.transform='translateX(0)';
+  el.caseReel.innerHTML='';
+  for(let i=0;i<40;i++){
+    const tile=document.createElement('div');
+    tile.className='case-tile'+(prize.type==='key'?' key':'');
+    if(i===WIN_INDEX){
+      tile.classList.add('win');
+      tile.innerHTML='<span class="ct-ico">'+prize.ico+'</span>'+prizeLabel(prize);
+    } else {
+      const rp=c.prizes[Math.floor(Math.random()*c.prizes.length)];
+      tile.innerHTML='<span class="ct-ico">'+rp.ico+'</span>'+prizeLabel(rp);
+    }
+    el.caseReel.appendChild(tile);
+  }
+  el.caseResult.textContent='';
+  el.caseModal.classList.add('open');
+  requestAnimationFrame(()=>{ requestAnimationFrame(()=>{
+    const wrapW = el.caseReel.parentElement.clientWidth;
+    const target = WIN_INDEX*(TILE_W+GAP) + TILE_W/2 - wrapW/2 + 9;
+    el.caseReel.style.transition='transform 4.2s cubic-bezier(.12,.86,.16,1)';
+    el.caseReel.style.transform='translateX('+(-target)+'px)';
+  });});
+  setTimeout(()=>{
+    if(prize.type==='key') state.keys += prize.count;
+    else state.stars += prize.amount;
+    save(); renderBalance();
+    el.caseResult.textContent = 'Выпало: '+prizeLabel(prize);
+    caseBusy=false;
+  }, 4400);
+}
+
+/* =====================================================================
+   КОЛЕСО УДАЧИ (множитель x0.1 … x3)
+   ===================================================================== */
+const WHEEL_SEGS = [
+  {m:0.1, c:'#2b2b45'}, {m:0.2, c:'#a98bff'}, {m:0.2, c:'#2b2b45'},
+  {m:0.3, c:'#7657e8'}, {m:0.3, c:'#2b2b45'}, {m:0.4, c:'#5fe3e0'},
+  {m:0.5, c:'#2b2b45'}, {m:0.7, c:'#3a9fd0'}, {m:1,   c:'#2b2b45'},
+  {m:1.5, c:'#ffd76a'}, {m:2,   c:'#ff9d3f'}, {m:3,   c:'#ff5f6d'},
+];
+function wheelGradient(){
+  const n=WHEEL_SEGS.length, seg=360/n;
+  return 'conic-gradient(from -90deg, '+WHEEL_SEGS.map((s,i)=>`${s.c} ${i*seg}deg ${(i+1)*seg}deg`).join(',')+')';
+}
+let wheelBusy=false, wheelAngle=0;
+function renderWheel(){
+  if(!el.wheel) return;
+  el.wheel.style.background = wheelGradient();
+  el.wheel.style.transition='none';
+  el.wheel.style.transform='rotate(0deg)';
+  wheelAngle=0; wheelBusy=false;
+}
+function spinWheel(){
+  if(wheelBusy) return;
+  const bet=parseInt(el.wheelBet.value,10);
+  if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
+  if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
+  state.stars-=bet; save(); renderBalance();
+  wheelBusy=true;
+  const idx = Math.floor(Math.random()*WHEEL_SEGS.length);
+  const seg = 360/WHEEL_SEGS.length;
+  const segCenter = idx*seg + seg/2;
+  const curMod = ((wheelAngle%360)+360)%360;
+  let delta = ((360 - segCenter) - curMod);
+  delta = ((delta%360)+360)%360;
+  const spins = 6 + Math.floor(Math.random()*3);
+  const target = wheelAngle + spins*360 + delta;
+  wheelAngle = target;
+  el.wheel.style.transition='transform 4s cubic-bezier(.15,.9,.15,1)';
+  el.wheel.style.transform='rotate('+target+'deg)';
+  setTimeout(()=>{
+    const segData=WHEEL_SEGS[idx];
+    const win=Math.round(bet*segData.m);
+    state.stars+=win; save(); renderBalance();
+    if(segData.m>=1) toast('x'+segData.m+'! Выигрыш '+win+' ⭐', true);
+    else if(win<bet) toast('x'+segData.m+' — '+win+' ⭐ (меньше ставки)');
+    else toast('x'+segData.m+' — '+win+' ⭐');
+    wheelBusy=false;
+  }, 4200);
+}
+
+/* =====================================================================
+   НАПЁРСТКИ (1 из 3, выплата x2.6)
+   ===================================================================== */
+const CUPS_PAYOUT = 2.6;
+let cupsState = { active:false, busy:false, ballCup:0, bet:0, cupPos:[0,1,2] };
+function renderCups(){
+  if(!el.cupsRow) return;
+  const cups=[...el.cupsRow.querySelectorAll('.cup')];
+  cups.forEach((c,i)=>{ c.style.left=(i*(100/3))+'%'; c.disabled=true; });
+  cupsState.active=false; cupsState.busy=false; cupsState.cupPos=[0,1,2];
+  if(el.cupsHint) el.cupsHint.textContent='Нажми «Играть», запомни стакан с шариком и угадай после перемешивания.';
+}
+function startCups(){
+  if(cupsState.busy) return;
+  const bet=parseInt(el.cupsBet.value,10);
+  if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
+  if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
+  state.stars-=bet; save(); renderBalance();
+  cupsState={ active:true, busy:true, ballCup:Math.floor(Math.random()*3), bet, cupPos:[0,1,2] };
+  const cups=[...el.cupsRow.querySelectorAll('.cup')];
+  cups.forEach((c,i)=>{ c.style.left=(i*(100/3))+'%'; c.classList.remove('peek','reveal','hit'); c.disabled=true; });
+  if(el.cupsHint) el.cupsHint.textContent='Запоминай, где шарик…';
+  cups[cupsState.ballCup].classList.add('peek');
+  setTimeout(()=>{
+    cups.forEach(c=>c.classList.remove('peek'));
+    shuffleCups(cups).then(()=>{
+      cupsState.busy=false;
+      cups.forEach(c=>c.disabled=false);
+      if(el.cupsHint) el.cupsHint.textContent='Где шарик? Нажми на стакан!';
+    });
+  }, 1200);
+}
+function shuffleCups(cups){
+  return new Promise(resolve=>{
+    let swaps=0;
+    const doSwap=()=>{
+      if(swaps>=5){ resolve(); return; }
+      let a=Math.floor(Math.random()*3), b=Math.floor(Math.random()*3);
+      while(b===a) b=Math.floor(Math.random()*3);
+      const sa=cupsState.cupPos[a], sb=cupsState.cupPos[b];
+      cupsState.cupPos[a]=sb; cupsState.cupPos[b]=sa;
+      cups[a].style.left=(sb*(100/3))+'%';
+      cups[b].style.left=(sa*(100/3))+'%';
+      swaps++;
+      setTimeout(doSwap, 360);
+    };
+    doSwap();
+  });
+}
+function pickCup(cupIndex){
+  if(!cupsState.active || cupsState.busy) return;
+  cupsState.busy=true;
+  const cups=[...el.cupsRow.querySelectorAll('.cup')];
+  cups.forEach(c=>c.disabled=true);
+  const win = cupIndex===cupsState.ballCup;
+  cups[cupsState.ballCup].classList.add('reveal');
+  if(win) cups[cupIndex].classList.add('hit');
+  let payout=0;
+  if(win){ payout=Math.round(cupsState.bet*CUPS_PAYOUT); state.stars+=payout; save(); renderBalance(); }
+  cupsState.active=false;
+  if(el.cupsHint) el.cupsHint.textContent = win ? ('Точно! +'+payout+' ⭐') : 'Мимо… шарик был под другим стаканом.';
+  if(win) toast('Угадал! +'+payout+' ⭐', true); else toast('Не угадал. Попробуй ещё');
+  setTimeout(()=>{ cupsState.busy=false; }, 400);
+}
+
+/* =====================================================================
    СОБЫТИЯ
    ===================================================================== */
 document.addEventListener('click',(e)=>{
@@ -789,6 +1083,26 @@ el.priceCancelBtn.addEventListener('click',closePriceModal);
 el.priceClose.addEventListener('click',closePriceModal);
 el.priceModal.addEventListener('click',e=>{ if(e.target===el.priceModal) closePriceModal(); });
 el.prizeContinue.addEventListener('click',closePrize);
+
+// подарок
+el.giftFab && el.giftFab.addEventListener('click',()=>goto('gift'));
+el.giftClaimBtn && el.giftClaimBtn.addEventListener('click',claimGift);
+
+// кейсы
+el.caseGrid && el.caseGrid.addEventListener('click',e=>{
+  const b=e.target.closest('[data-case]');
+  if(b) openCase(b.dataset.case);
+});
+el.caseClaim && el.caseClaim.addEventListener('click',()=>el.caseModal.classList.remove('open'));
+
+// колесо
+el.wheelSpin && el.wheelSpin.addEventListener('click',spinWheel);
+
+// напёрстки
+el.cupsStart && el.cupsStart.addEventListener('click',startCups);
+if(el.cupsRow) [...el.cupsRow.querySelectorAll('.cup')].forEach((cup,idx)=>{
+  cup.addEventListener('click',()=>pickCup(idx));
+});
 
 // ячейки: кнопки
 el.openOneBtn && el.openOneBtn.addEventListener('click',()=>{
@@ -827,8 +1141,16 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
 (async function boot(){
   load(); initTelegram();
   renderBalance(); renderNFT(); renderCells();
+  renderGiftFab();
   await threeReady();
   renderNFT();
   renderShop();
   renderMines();
+  // ежесекундное обновление подарка (иконка в меню + таймер на экране)
+  setInterval(()=>{
+    const gs=document.getElementById('screen-gift');
+    const ms=document.getElementById('screen-menu');
+    if(gs && gs.classList.contains('active')) updateGiftTimer();
+    if(ms && ms.classList.contains('active')) renderGiftFab();
+  }, 1000);
 })();
