@@ -18,7 +18,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="style.css?v=9" />
+<link rel="stylesheet" href="style.css?v=10" />
 </head>
 <body>
 <div id="loadingScreen">
@@ -31,7 +31,7 @@
 <div id="app">
   <!-- ===================== ГЛАВНОЕ МЕНЮ ===================== -->
   <section id="screen-menu" class="screen active">
-    <div class="screen-bg" id="menuBg" style="background-image:url('assets/фон_меню.png')"></div>
+    <div class="screen-bg" id="menuBg" style="background-image:url('assets/фон_меню_тёмный.jpg')"></div>
     <div class="ambient-orb"></div>
 
     <header class="topbar">
@@ -107,6 +107,16 @@
         <span class="card-shade"></span>
         <span class="card-ico card-emoji">🎯</span>
         <span class="card-title">Дартс</span>
+      </button>
+      <button class="nav-card nav-hilo" data-goto="hilo" style="--bg:url('assets/фон_игры_выше_ниже.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico card-emoji">🃏</span>
+        <span class="card-title">Выше-Ниже</span>
+      </button>
+      <button class="nav-card nav-timing" data-goto="timing" style="--bg:url('assets/фон_игры_тайминг.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico card-emoji">⏱️</span>
+        <span class="card-title">Тайминг</span>
       </button>
       <button class="nav-card nav-market" style="--bg:url('assets/фон_игры_рынок.jpg')">
         <span class="card-shade"></span>
@@ -302,6 +312,55 @@
     </div>
   </section>
 
+  <!-- ===================== ВЫШЕ-НИЖЕ ===================== -->
+  <section id="screen-hilo" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_выше_ниже.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Выше-Ниже</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="hiloBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="hilo-stage">
+        <div class="card" id="hiloCur"></div>
+        <div class="hilo-arrow">→</div>
+        <div class="card back" id="hiloNext"></div>
+      </div>
+      <div class="dice-choices">
+        <button class="dice-choice" data-hilo="high">Выше<b>x1.9</b></button>
+        <button class="dice-choice" data-hilo="low">Ниже<b>x1.9</b></button>
+      </div>
+      <div class="mines-row" style="margin-top:14px">
+        <label>Ставка</label>
+        <input id="hiloBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
+      </div>
+      <button class="solid-btn purple" id="hiloPull">Тянуть карту</button>
+      <p class="cells-note">Угадай, будет ли следующая карта выше или ниже текущей. Равные — проигрыш. Верный прогноз — x1.9.</p>
+    </div>
+  </section>
+
+  <!-- ===================== ТАЙМИНГ ===================== -->
+  <section id="screen-timing" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_тайминг.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Тайминг</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="timingBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="timing-track" id="timingTrack">
+        <div class="timing-zone"></div>
+        <div class="timing-marker" id="timingMarker"></div>
+      </div>
+      <div class="mines-row">
+        <label>Ставка</label>
+        <input id="timingBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
+      </div>
+      <button class="solid-btn purple" id="timingStop">Начать</button>
+      <p class="cells-note">Останови бегунок точно в зелёной зоне. Чем ближе к центру — тем больше множитель (до x5).</p>
+    </div>
+  </section>
+
   <!-- ===================== ПОДАРОК ===================== -->
   <section id="screen-gift" class="screen">
     <div class="screen-bg dim" style="background-image:url('assets/фон_меню.png')"></div>
@@ -380,7 +439,7 @@
 <div id="viewerModal" class="modal">
   <div class="viewer-sheet">
     <div class="viewer-stage" id="viewerStage">
-      <div class="viewer-loading" id="viewerLoading">Загрузка 3D модели…</div>
+      <div class="viewer-loading" id="viewerLoading"><span class="spin"></span>Загрузка 3D модели…</div>
     </div>
     <div class="viewer-info">
       <h3 id="viewerTitle">—</h3>
@@ -452,6 +511,6 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app.js?v=31"></script>
+<script src="app.js?v=32"></script>
 </body>
 </html>

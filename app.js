@@ -130,6 +130,10 @@ const el = {
   diceBalance:$('#diceBalance'), dice1:$('#dice1'), dice2:$('#dice2'), diceBet:$('#diceBet'), diceRoll:$('#diceRoll'),
   // дартс
   dartsBalance:$('#dartsBalance'), dartsBoard:$('#dartsBoard'), dart:$('#dart'), dartsBet:$('#dartsBet'), dartsThrow:$('#dartsThrow'),
+  // выше-ниже
+  hiloBalance:$('#hiloBalance'), hiloCur:$('#hiloCur'), hiloNext:$('#hiloNext'), hiloBet:$('#hiloBet'), hiloPull:$('#hiloPull'),
+  // тайминг
+  timingBalance:$('#timingBalance'), timingTrack:$('#timingTrack'), timingMarker:$('#timingMarker'), timingBet:$('#timingBet'), timingStop:$('#timingStop'),
   toasts:$('#toasts'),
 };
 
@@ -192,6 +196,8 @@ function renderBalance(){
   if (el.minesBalance) el.minesBalance.textContent = state.stars;
   if (el.diceBalance) el.diceBalance.textContent = state.stars;
   if (el.dartsBalance) el.dartsBalance.textContent = state.stars;
+  if (el.hiloBalance) el.hiloBalance.textContent = state.stars;
+  if (el.timingBalance) el.timingBalance.textContent = state.stars;
   const badge = document.querySelector('[data-badge="keys"]');
   if (badge) badge.textContent = state.keys + ' 🔑';
 }
@@ -210,6 +216,8 @@ function goto(name){
   if (name==='cups') renderCups();
   if (name==='dice') renderDice();
   if (name==='darts') renderDarts();
+  if (name==='hilo') renderHilo();
+  if (name==='timing') renderTiming();
   if (name==='gift') renderGiftScreen();
   if (name==='menu') renderGiftFab();
   // нативная кнопка «назад» Telegram на подэкранах
@@ -495,7 +503,7 @@ function renderShop(){
       const p3d=e.target.closest('[data-p3d-btn]');
       const detail=e.target.closest('.item-media');
       if(buy){ e.stopPropagation(); if(ownedCount(buy.dataset.buy)>0) openModal(buy.dataset.buy); else buyNFT(buy.dataset.buy); return; }
-      if(p3d){ e.stopPropagation(); const node=c.querySelector(`[data-p3d="${p3d.dataset.p3dBtn}"]`); c.classList.add('viewing'); previewInto(node,p3d.dataset.p3dBtn,()=>{ node.innerHTML += '<button class="card-3d-back" data-card-back>Обратно</button>'; }); return; }
+      if(p3d){ e.stopPropagation(); openViewer(p3d.dataset.p3dBtn); return; }
       const back=e.target.closest('[data-card-back]');
       if(back){ e.stopPropagation(); c.classList.remove('viewing'); const node=c.querySelector(`[data-p3d]`); if(node){ node.innerHTML=''; if(node._v){try{node._v.dispose();}catch(_){}} } return; }
       e.stopPropagation(); openModal(m.id);
@@ -977,6 +985,17 @@ function renderWheel(){
   el.wheel.style.transition='none';
   el.wheel.style.transform='rotate(0deg)';
   wheelAngle=0; wheelBusy=false;
+  // подписи секторов: что выпадет
+  if(!el.wheel.querySelector('.wheel-label')){
+    const n=WHEEL_SEGS.length, seg=360/n;
+    WHEEL_SEGS.forEach((s,i)=>{
+      const d=document.createElement('div');
+      d.className='wheel-label';
+      d.style.transform='rotate('+(i*seg+seg/2)+'deg)';
+      d.innerHTML='<span>x'+s.m+'</span>';
+      el.wheel.appendChild(d);
+    });
+  }
 }
 function spinWheel(){
   if(wheelBusy) return;
@@ -1162,6 +1181,98 @@ function throwDart(){
 }
 
 /* =====================================================================
+   ВЫШЕ-НИЖЕ (карты: выше/ниже, x1.9)
+   ===================================================================== */
+const CARD_RANKS=['2','3','4','5','6','7','8','9','10','J','Q','K'];
+const CARD_SUITS=[{s:'♠',red:false},{s:'♥',red:true},{s:'♦',red:true},{s:'♣',red:false}];
+let hiloPick='high', hiloBusy=false, hiloCur=null;
+function setCard(node,r,s){
+  if(!node) return;
+  node.className='card'+(CARD_SUITS[s].red?' red':'');
+  node.innerHTML='<span class="c-rank">'+CARD_RANKS[r]+'</span><span class="c-suit">'+CARD_SUITS[s].s+'</span>';
+}
+function renderHilo(){
+  if(!hiloCur) hiloCur={r:Math.floor(Math.random()*CARD_RANKS.length), s:Math.floor(Math.random()*4)};
+  setCard(el.hiloCur,hiloCur.r,hiloCur.s);
+  if(el.hiloNext){ el.hiloNext.className='card back'; el.hiloNext.innerHTML=''; }
+  document.querySelectorAll('.dice-choice[data-hilo]').forEach(b=>b.classList.toggle('active', b.dataset.hilo===hiloPick));
+}
+function pullHilo(){
+  if(hiloBusy) return;
+  const bet=parseInt(el.hiloBet.value,10);
+  if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
+  if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
+  state.stars-=bet; save(); renderBalance();
+  hiloBusy=true;
+  const nr=Math.floor(Math.random()*CARD_RANKS.length), ns=Math.floor(Math.random()*4);
+  if(el.hiloNext){ el.hiloNext.className='card back'; el.hiloNext.innerHTML=''; }
+  setTimeout(()=>{
+    setCard(el.hiloNext,nr,ns);
+    if(el.hiloNext) el.hiloNext.classList.add('flip');
+    const curV=hiloCur.r+2, nextV=nr+2;
+    let win=false;
+    if(hiloPick==='high') win = nextV>curV; else win = nextV<curV;
+    const payout = win ? Math.round(bet*1.9) : 0;
+    if(win){ state.stars+=payout; save(); renderBalance(); toast('Победа! +'+payout+' ⭐', true); }
+    else if(nextV===curV) toast('Равные карты — не повезло');
+    else toast('Не угадал');
+    setTimeout(()=>{
+      hiloCur={r:nr,s:ns};
+      setCard(el.hiloCur,nr,ns);
+      if(el.hiloNext){ el.hiloNext.className='card back'; el.hiloNext.innerHTML=''; }
+      hiloBusy=false;
+    }, 950);
+  }, 320);
+}
+
+/* =====================================================================
+   ТАЙМИНГ (стоп в зоне, x1.1 … x5)
+   ===================================================================== */
+const timingState={running:false,armed:false,pos:0,dir:1,bet:0,raf:0};
+function renderTiming(){
+  cancelAnimationFrame(timingState.raf);
+  timingState.running=false; timingState.armed=false; timingState.pos=0; timingState.dir=1;
+  if(el.timingMarker) el.timingMarker.style.left='0%';
+  if(el.timingStop) el.timingStop.textContent='Начать';
+}
+function timingTick(){
+  if(!timingState.running) return;
+  const scr=document.getElementById('screen-timing');
+  if(!scr || !scr.classList.contains('active')){ timingState.running=false; timingState.armed=false; if(el.timingStop) el.timingStop.textContent='Начать'; return; }
+  timingState.pos += timingState.dir*1.6;
+  if(timingState.pos>=100){ timingState.pos=100; timingState.dir=-1; }
+  if(timingState.pos<=0){ timingState.pos=0; timingState.dir=1; }
+  if(el.timingMarker) el.timingMarker.style.left=timingState.pos+'%';
+  timingState.raf=requestAnimationFrame(timingTick);
+}
+function timingButton(){
+  if(!timingState.armed){
+    const bet=parseInt(el.timingBet.value,10);
+    if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
+    if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
+    state.stars-=bet; save(); renderBalance();
+    timingState.bet=bet; timingState.pos=0; timingState.dir=1; timingState.running=true; timingState.armed=true;
+    if(el.timingStop) el.timingStop.textContent='Стоп';
+    timingTick();
+  } else {
+    timingState.running=false; timingState.armed=false;
+    cancelAnimationFrame(timingState.raf);
+    if(el.timingStop) el.timingStop.textContent='Начать';
+    const d=Math.abs(timingState.pos-50);
+    let mult=0,label='';
+    if(d<4){mult=5;label='Идеально';}
+    else if(d<10){mult=2;label='Точно';}
+    else if(d<18){mult=1.1;label='Близко';}
+    else {mult=0;label='Мимо';}
+    const payout=Math.round(timingState.bet*mult);
+    if(payout>0){ state.stars+=payout; save(); renderBalance(); }
+    if(mult>=1) toast(label+'! x'+mult+' +'+payout+' ⭐', true);
+    else if(mult>0) toast(label+': x'+mult+' — '+payout+' ⭐');
+    else toast('Мимо зоны!');
+  }
+}
+
+/* =====================================================================
    СОБЫТИЯ
    ===================================================================== */
 document.addEventListener('click',(e)=>{
@@ -1218,6 +1329,13 @@ document.querySelectorAll('.dice-choice').forEach(b=>b.addEventListener('click',
 
 // дартс
 if(el.dartsThrow) el.dartsThrow.addEventListener('click',throwDart);
+
+// выше-ниже
+if(el.hiloPull) el.hiloPull.addEventListener('click',pullHilo);
+document.querySelectorAll('.dice-choice[data-hilo]').forEach(b=>b.addEventListener('click',()=>{ hiloPick=b.dataset.hilo; renderHilo(); }));
+
+// тайминг
+if(el.timingStop) el.timingStop.addEventListener('click',timingButton);
 
 // ячейки: кнопки
 el.openOneBtn && el.openOneBtn.addEventListener('click',()=>{
