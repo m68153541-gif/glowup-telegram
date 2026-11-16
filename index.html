@@ -18,7 +18,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="style3.css?v=1" />
+<link rel="stylesheet" href="style4.css?v=1" />
 </head>
 <body>
 <div id="loadingScreen">
@@ -127,6 +127,11 @@
         <span class="card-ico card-emoji">🔵</span>
         <span class="card-title">Плинко</span>
         <span class="card-soon">Скоро</span>
+      </button>
+      <button class="nav-card nav-upgrade" data-goto="upgrade" style="--bg:url('assets/фон_игры_колесо.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico card-emoji">⬆️</span>
+        <span class="card-title">Апгрейдер</span>
       </button>
       <button class="nav-card nav-market" style="--bg:url('assets/фон_игры_рынок.jpg')">
         <span class="card-shade"></span>
@@ -368,6 +373,42 @@
     </div>
   </section>
 
+  <!-- ===================== АПГРЕЙДЕР ===================== -->
+  <section id="screen-upgrade" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_колесо.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Апгрейдер</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="upBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="mines-row">
+        <label>Ставка</label>
+        <input id="upBet" class="code-input" type="number" inputmode="numeric" value="50" min="1" />
+      </div>
+      <div class="up-mults" id="upMults">
+        <button class="up-mult" data-mult="1.5">×1.5</button>
+        <button class="up-mult active" data-mult="2">×2</button>
+        <button class="up-mult" data-mult="3">×3</button>
+        <button class="up-mult" data-mult="5">×5</button>
+        <button class="up-mult" data-mult="10">×10</button>
+      </div>
+      <div class="up-chance">Шанс: <b id="upChanceStars">47.5%</b> · Получишь: <b id="upTargetStars">100</b> ⭐</div>
+
+      <div class="up-dial-wrap">
+        <div class="up-dial" id="upDial">
+          <div class="up-sector" id="upSector"></div>
+          <div class="up-pointer" id="upPointer"></div>
+          <div class="up-hub">⬆️</div>
+        </div>
+      </div>
+
+      <button class="solid-btn purple" id="upGo">Улучшить</button>
+      <p class="cells-note">Шанс = ставка / цель × 0.95. Выиграть можно, но трудно.</p>
+      <div class="up-history" id="upHistory"></div>
+    </div>
+  </section>
+
   <!-- ===================== ПОДАРОК ===================== -->
   <section id="screen-gift" class="screen">
     <div class="screen-bg dim" style="background-image:url('assets/фон_меню.png')"></div>
@@ -546,6 +587,6 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app3.js?v=1"></script>
+<script src="app4.js?v=3"></script>
 </body>
 </html>

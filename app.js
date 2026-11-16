@@ -31,6 +31,8 @@ const DEFAULT_STATE = {
   usedCodes: {},         // активированные коды (чтобы не фармить повторно)
   firstSeen: 0,          // ts первого захода (для «часов в игре»)
   gamesPlayed: 0,        // сыграно раундов в играх
+  gifts: {},             // инвентарь подарков: id -> количество
+  giftStarter: false,    // выданы ли стартовые подарки
 };
 
 const MODEL_CATALOG = [
@@ -145,6 +147,11 @@ const el = {
   hiloBalance:$('#hiloBalance'), hiloCur:$('#hiloCur'), hiloNext:$('#hiloNext'), hiloBet:$('#hiloBet'), hiloPull:$('#hiloPull'),
   // плинко
   plinkoBalance:$('#plinkoBalance'), plinkoCanvas:$('#plinkoCanvas'), plinkoBet:$('#plinkoBet'), plinkoDrop:$('#plinkoDrop'),
+  // апгрейдер
+  upBalance:$('#upBalance'), upBet:$('#upBet'), upChanceStars:$('#upChanceStars'), upTargetStars:$('#upTargetStars'),
+  upFromGifts:$('#upFromGifts'), upToGifts:$('#upToGifts'), upChanceGifts:$('#upChanceGifts'),
+  upDial:$('#upDial'), upSector:$('#upSector'), upPointer:$('#upPointer'), upGo:$('#upGo'), upHistory:$('#upHistory'),
+  upStarsPane:$('#upStarsPane'), upGiftsPane:$('#upGiftsPane'),
   toasts:$('#toasts'),
 };
 
@@ -209,6 +216,7 @@ function renderBalance(){
   if (el.dartsBalance) el.dartsBalance.textContent = state.stars;
   if (el.hiloBalance) el.hiloBalance.textContent = state.stars;
   if (el.plinkoBalance) el.plinkoBalance.textContent = state.stars;
+  if (el.upBalance) el.upBalance.textContent = state.stars;
   const badge = document.querySelector('[data-badge="keys"]');
   if (badge) badge.textContent = state.keys + ' 🔑';
 }
@@ -277,6 +285,7 @@ function goto(name){
   if (name==='darts') renderDarts();
   if (name==='hilo') renderHilo();
   if (name==='plinko') renderPlinko();
+  if (name==='upgrade') renderUpgrade();
   if (name==='gift') renderGiftScreen();
   if (name==='menu') renderGiftFab();
   // нативная кнопка «назад» Telegram на подэкранах
@@ -1397,6 +1406,121 @@ function finishPlinko(slot,bet){
 }
 
 /* =====================================================================
+   АПГРЕЙДЕР (шанс = ставка/цель × 0.95, «стрелка»)
+   ===================================================================== */
+const GIFTS = [
+  { id:'bear',   name:'Мишка',  val:50,   img:'assets/подарок_мишка.jpg' },
+  { id:'duck',   name:'Уточка', val:150,  img:'assets/подарок_уточка.jpg' },
+  { id:'cake',   name:'Тортик', val:400,  img:'assets/подарок_торт.jpg' },
+  { id:'crown',  name:'Корона', val:1000, img:'assets/подарок_корона.jpg' },
+  { id:'rocket', name:'Ракета', val:3000, img:'assets/подарок_ракета.jpg' },
+];
+function giftById(id){ return GIFTS.find(g=>g.id===id); }
+function giftCount(id){ return (state.gifts && state.gifts[id])||0; }
+function seedGifts(){
+  if(!state.giftStarter){
+    state.gifts = state.gifts || {};
+    state.gifts['bear'] = (state.gifts['bear']||0) + 2;
+    state.giftStarter = true; save();
+  }
+}
+let upTab='stars', upMult=2, upFrom=null, upTo=null, upBusy=false;
+const upLog=[];
+function upChanceStars(){ return 0.95/upMult; }
+function upTargetStarsVal(){ const bet=parseInt(el.upBet.value,10)||0; return Math.round(bet*upMult); }
+function currentChance(){
+  if(upTab==='stars') return upChanceStars();
+  if(upFrom&&upTo){ const f=giftById(upFrom), t=giftById(upTo); if(f&&t) return f.val/t.val*0.95; }
+  return 0;
+}
+function updateDial(){
+  const ch=Math.max(0,Math.min(1,currentChance()));
+  const pct=(ch*100).toFixed(2);
+  if(el.upSector){ el.upSector.style.background='conic-gradient(from -90deg,#2fa85f 0 '+pct+'%,#23233a '+pct+'% 100%)'; }
+}
+function renderUpHistory(){
+  if(!el.upHistory) return;
+  el.upHistory.innerHTML='';
+  upLog.slice(-8).reverse().forEach(h=>{
+    const d=document.createElement('div');
+    d.className='up-h '+(h.win?'win':'lose');
+    d.innerHTML='<span>'+(h.win?'Победа':'Проигрыш')+' · '+(h.chance*100).toFixed(1)+'%</span><span>'+(h.win?'+'+h.winVal:'-'+h.loseVal)+'</span>';
+    el.upHistory.appendChild(d);
+  });
+}
+function renderGiftPicker(){
+  if(!el.upFromGifts) return;
+  el.upFromGifts.innerHTML='';
+  const owned=GIFTS.filter(g=>giftCount(g.id)>0);
+  if(owned.length===0){
+    el.upFromGifts.innerHTML='<div class="cells-note" style="grid-column:1/-1">Нет подарков — выиграй их в апгрейде.</div>';
+  }
+  owned.forEach(g=>{
+    const d=document.createElement('div');
+    d.className='up-gift'+(upFrom===g.id?' sel':'');
+    d.innerHTML='<img src="'+g.img+'" alt=""><div class="g-name">'+g.name+'</div><div class="g-val">'+g.val+' ⭐</div><span class="g-cnt">'+giftCount(g.id)+'</span>';
+    d.addEventListener('click',()=>{ upFrom=g.id; if(upTo && giftById(upTo).val<=g.val) upTo=null; renderUpgrade(); });
+    el.upFromGifts.appendChild(d);
+  });
+  el.upToGifts.innerHTML='';
+  const fromG=upFrom?giftById(upFrom):null;
+  GIFTS.filter(g=>!fromG || g.val>fromG.val).forEach(g=>{
+    const d=document.createElement('div');
+    d.className='up-gift'+(upTo===g.id?' sel':'')+(!fromG?' dis':'');
+    d.innerHTML='<img src="'+g.img+'" alt=""><div class="g-name">'+g.name+'</div><div class="g-val">'+g.val+' ⭐</div>';
+    d.addEventListener('click',()=>{ if(!fromG) return; upTo=g.id; renderUpgrade(); });
+    el.upToGifts.appendChild(d);
+  });
+  if(el.upChanceGifts){
+    if(fromG && upTo){ el.upChanceGifts.textContent=(fromG.val/giftById(upTo).val*0.95*100).toFixed(1)+'%'; }
+    else el.upChanceGifts.textContent='—';
+  }
+}
+function renderUpgrade(){
+  if(el.upBalance) el.upBalance.textContent=state.stars;
+  document.querySelectorAll('.up-mult').forEach(b=>b.classList.toggle('active', parseFloat(b.dataset.mult)===upMult));
+  if(el.upChanceStars) el.upChanceStars.textContent=(upChanceStars()*100).toFixed(1)+'%';
+  if(el.upTargetStars) el.upTargetStars.textContent=upTargetStarsVal();
+  const hub=document.querySelector('.up-hub');
+  if(hub) hub.textContent='×'+upMult;
+  updateDial();
+  renderUpHistory();
+}
+function doUpgrade(){
+  if(upBusy) return;
+  const bet=parseInt(el.upBet.value,10);
+  if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
+  if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
+  const ch=upChanceStars();
+  const target=Math.round(bet*upMult);
+  upBusy=true;
+  state.stars-=bet; save(); renderBalance(); if(el.upBalance) el.upBalance.textContent=state.stars;
+  const win=Math.random()<ch;
+  const chanceDeg=ch*360;
+  let finalDeg;
+  if(win){ finalDeg = 4 + Math.random()*Math.max(1,chanceDeg-8); }
+  else { finalDeg = chanceDeg + 6 + Math.random()*Math.max(1, 354-chanceDeg); }
+  const turns=5*360;
+  el.upPointer.style.transition='none';
+  el.upPointer.style.transform='rotate(0deg)';
+  void el.upPointer.offsetWidth;
+  el.upPointer.style.transition='transform 3.2s cubic-bezier(.15,.9,.15,1)';
+  el.upPointer.style.transform='rotate('+(turns+finalDeg)+'deg)';
+  setTimeout(()=>{
+    if(win){
+      state.stars+=target; save(); renderBalance(); if(el.upBalance) el.upBalance.textContent=state.stars;
+      toast('Победа! +'+target+' ⭐', true);
+    } else {
+      toast('Проигрыш. Ставка сгорела');
+    }
+    upLog.push({ win:win, chance:ch, winVal:target+' ⭐', loseVal:bet+' ⭐' });
+    if(upLog.length>30) upLog.shift();
+    upBusy=false;
+    renderUpHistory();
+  }, 3300);
+}
+
+/* =====================================================================
    СОБЫТИЯ
    ===================================================================== */
 document.addEventListener('click',(e)=>{
@@ -1473,6 +1597,12 @@ document.querySelectorAll('.dice-choice[data-hilo]').forEach(b=>b.addEventListen
 // плинко
 if(el.plinkoDrop) el.plinkoDrop.addEventListener('click',dropPlinko);
 
+// апгрейдер
+document.querySelectorAll('.up-tab').forEach(b=>b.addEventListener('click',()=>{ upTab=b.dataset.uptab; renderUpgrade(); }));
+document.querySelectorAll('.up-mult').forEach(b=>b.addEventListener('click',()=>{ upMult=parseFloat(b.dataset.mult); renderUpgrade(); }));
+if(el.upBet) el.upBet.addEventListener('input',()=>{ if(el.upTargetStars) el.upTargetStars.textContent=upTargetStarsVal(); });
+if(el.upGo) el.upGo.addEventListener('click',doUpgrade);
+
 // ячейки: кнопки
 el.openOneBtn && el.openOneBtn.addEventListener('click',()=>{
   if(state.keys>0){
@@ -1512,6 +1642,7 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
   setTimeout(hideLoad, 3800);            // страховка, если что-то задержится
   load(); initTelegram();
   if(!state.firstSeen){ state.firstSeen=Date.now(); save(); }
+  seedGifts();
   renderBalance(); renderLevel(); renderNFT(); renderCells();
   renderGiftFab();
   await threeReady();
