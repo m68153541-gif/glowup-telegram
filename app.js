@@ -4,11 +4,14 @@
    ===================================================================== */
 
 // ---------- Настройки ----------
-const CODE_PASS   = '0306';
-const CODE_REWARD = 1000;
+const ADMIN_ID   = 8513244807;         // Telegram ID админа
+const DONATE_BOT = 'gLOWOPPBOT';       // бот для доната
+const DONATE_MIN = 5;                  // минимум звёзд
+const LOC2_LEVEL = 50;                 // уровень для второй локации
+const LOC2_BOOST = 1.00678;            // +0.678% к шансам
+let isAdmin = false;
 const KEY_PRICE   = 100;
 const KEY_PACKS   = [ {n:1, price:100}, {n:5, price:500}, {n:10, price:1000} ];
-const DONATE_BOT  = '@gryzikkk200';
 const GIFT_INTERVAL = 24*60*60*1000;  // раз в 24 часа
 const GIFT_KEYS     = 3;               // 3 ключа за подарок
 const LEVEL_XP      = 150;             // звёзд на 1 уровень
@@ -166,6 +169,9 @@ function initTelegram(){
     }catch(_){}
     const u = tg.initDataUnsafe && tg.initDataUnsafe.user;
     if (u){
+      state.tgId = u.id; state.tgUsername = u.username || '';
+      isAdmin = (Number(u.id) === ADMIN_ID);
+      trackOnline(u.id);
       el.userName.textContent = u.first_name || 'Игрок';
       el.userHandle.textContent = u.username ? '@'+u.username : 'id '+u.id;
       if (u.photo_url){ el.avatarImg.src=u.photo_url; el.avatarImg.style.display='block'; el.avatarPh.style.display='none'; }
@@ -190,6 +196,70 @@ function tgHideBack(){
   if (tg && isTG && tg.BackButton){
     try{ tg.BackButton.hide(); }catch(_){}
   }
+}
+
+// ---------- Онлайн (тихий учёт) ----------
+function trackOnline(uid){
+  try{
+    const KEY='glowup_online_v1'; const now=Date.now();
+    const map=JSON.parse(localStorage.getItem(KEY)||'{}');
+    if(uid) map[uid]=now;
+    Object.keys(map).forEach(k=>{ if(now-map[k] > 5*60*1000) delete map[k]; });
+    localStorage.setItem(KEY, JSON.stringify(map));
+    state.onlineCount = Object.keys(map).length;
+  }catch(_){}
+}
+
+// ---------- Локации ----------
+function chanceBoost(){ return state.loc===2 ? LOC2_BOOST : 1; }
+function bonusHit(){ return state.loc===2 && Math.random() < (LOC2_BOOST-1); }
+function renderLocUI(){
+  const b=document.getElementById('locBanner'); if(b) b.style.display=(state.loc===2)?'flex':'none';
+  const back=document.getElementById('locBackBtn'); if(back) back.style.display=(state.loc===2)?'flex':'none';
+  const grid=document.querySelector('.menu-grid'); if(grid) grid.classList.toggle('loc2-order', state.loc===2);
+  const mark=document.getElementById('mapMark2');
+  if(mark){
+    const open=(state.level||1)>=LOC2_LEVEL;
+    mark.classList.toggle('locked', !open);
+    mark.classList.toggle('gold', open);
+    mark.title = open ? 'Локация 2' : ('Откроется на '+LOC2_LEVEL+' уровне');
+  }
+}
+function setLoc(n){
+  state.loc=n; save();
+  document.body.classList.toggle('loc2', n===2);
+  renderLocUI();
+}
+function teleportTo(n){
+  const ov=document.getElementById('locTransition');
+  if(!ov){ setLoc(n); return; }
+  ov.classList.add('play');
+  setTimeout(()=>setLoc(n), 650);
+  setTimeout(()=>ov.classList.remove('play'), 1400);
+}
+
+// ---------- Админ ----------
+function grantStars(v){
+  if(!isAdmin) return;
+  v=parseInt(v,10)||0;
+  if(v<=0){ toast('Введите сумму'); return; }
+  state.stars += v; save(); renderBalance();
+  toast('+'+v+' ⭐ зачислено', true);
+}
+function openAdmin(){
+  if(!isAdmin){ return; }
+  const m=document.getElementById('adminModal'); if(m) m.classList.add('open');
+}
+function closeAdmin(){ const m=document.getElementById('adminModal'); if(m) m.classList.remove('open'); }
+
+// ---------- Донат ----------
+function donateDeep(amount){
+  amount=Math.max(DONATE_MIN, parseInt(amount,10)||DONATE_MIN);
+  const url='https://t.me/'+DONATE_BOT+'?start=donate_'+amount;
+  try{
+    if(window.Telegram && Telegram.WebApp && Telegram.WebApp.openTelegramLink) Telegram.WebApp.openTelegramLink(url);
+    else window.open(url,'_blank');
+  }catch(_){ window.open(url,'_blank'); }
 }
 
 // ---------- Состояние ----------
@@ -266,6 +336,7 @@ function openProfile(){
   set('statStars', state.stars);
   set('statKeys', state.keys);
   set('statXp', (state.levelXp||0)+'/'+LEVEL_XP);
+  const med=document.getElementById('adminMedal'); if(med) med.style.display=isAdmin?'flex':'none';
   if(el.profileModal) el.profileModal.classList.add('open');
 }
 
@@ -847,6 +918,7 @@ function startMines(){
 }
 function openMine(i){
   if(!mineState.active || mineState.opened.includes(i)) return;
+  if(mineState.grid[i]===1 && bonusHit()) mineState.grid[i]=0;
   if(mineState.grid[i]===1){
     mineState.opened.push(i);
     renderMines();
@@ -872,18 +944,7 @@ function cashoutMines(){
 /* =====================================================================
    НАГРАДЫ / КОД
    ===================================================================== */
-function applyCode(){
-  const v=(el.codeInput.value||'').trim();
-  if(v!==CODE_PASS){ toast('Неверный код'); return; }
-  state.usedCodes = state.usedCodes || {};
-  if(state.usedCodes[v]){ toast('Этот код уже активирован'); return; }
-  state.usedCodes[v]=true;
-  state.stars+=CODE_REWARD;
-  save(); renderBalance();
-  toast('+'+CODE_REWARD+' звёзд!',true);
-  el.codeInput.value='';
-}
-function donate(){ toast('Донат через бота '+DONATE_BOT); }
+function donatePreset(amount){ donateDeep(amount); }
 
 /* =====================================================================
    ЕЖЕДНЕВНЫЙ ПОДАРОК (3 ключа раз в 24 часа)
@@ -1005,7 +1066,8 @@ function openCase(id){
   if(state.stars < c.price){ toast('Недостаточно звёзд'); return; }
   state.stars -= c.price; countGame(); save(); renderBalance();
   caseBusy=true;
-  const prize = pickPrize(c);
+  let prize = pickPrize(c);
+  if(bonusHit() && Array.isArray(c.prizes)){ const best=c.prizes.slice().sort((a,b)=>(b.amount||0)-(a.amount||0))[0]; if(best) prize=best; }
   const TILE_W=92, GAP=10, WIN_INDEX=34;
   el.caseReel.style.transition='none';
   el.caseReel.style.transform='translateX(0)';
@@ -1078,7 +1140,8 @@ function spinWheel(){
   if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
   state.stars-=bet; countGame(); save(); renderBalance();
   wheelBusy=true;
-  const idx = Math.floor(Math.random()*WHEEL_SEGS.length);
+  let idx = Math.floor(Math.random()*WHEEL_SEGS.length);
+  if(bonusHit()){ let bi=0; WHEEL_SEGS.forEach((s,i)=>{ if(s.m>WHEEL_SEGS[bi].m) bi=i; }); idx=bi; }
   const seg = 360/WHEEL_SEGS.length;
   const segCenter = idx*seg + seg/2;
   const curMod = ((wheelAngle%360)+360)%360;
@@ -1154,7 +1217,8 @@ function pickCup(cupIndex){
   cupsState.busy=true;
   const cups=[...el.cupsRow.querySelectorAll('.cup')];
   cups.forEach(c=>c.disabled=true);
-  const win = cupIndex===cupsState.ballCup;
+  let win = cupIndex===cupsState.ballCup;
+  if(!win && bonusHit()){ cupsState.ballCup=cupIndex; win=true; }
   cups[cupsState.ballCup].classList.add('reveal');
   if(win) cups[cupIndex].classList.add('hit');
   let payout=0;
@@ -1201,7 +1265,12 @@ function rollDice(){
   setTimeout(()=>{
     clearInterval(spin);
     d1.classList.remove('rolling'); d2.classList.remove('rolling');
-    const v1=1+Math.floor(Math.random()*6), v2=1+Math.floor(Math.random()*6);
+    let v1=1+Math.floor(Math.random()*6), v2=1+Math.floor(Math.random()*6);
+    if(bonusHit()){
+      if(dicePick==='low' && v1+v2>=7){ v1=1; v2=1+Math.floor(Math.random()*5); }
+      else if(dicePick==='high' && v1+v2<=7){ v1=6; v2=2+Math.floor(Math.random()*5); }
+      else if(dicePick!=='low' && dicePick!=='high' && v1+v2!==7){ v1=1+Math.floor(Math.random()*6); v2=7-v1; if(v2<1){v2=6;v1=1;} if(v2>6){v2=6;v1=1;} }
+    }
     renderDie(d1,v1); renderDie(d2,v2);
     const sum=v1+v2;
     let win=false, mult=1.9;
@@ -1233,7 +1302,8 @@ function throwDart(){
   dart.style.transition='none'; dart.style.left='50%'; dart.style.top='92%'; dart.style.opacity='1';
   void dart.offsetWidth;
   dart.style.transition='left .7s cubic-bezier(.2,.8,.2,1), top .7s cubic-bezier(.2,.8,.2,1)';
-  const rr=Math.sqrt(Math.random());          // равномерно по площади
+  let rr=Math.sqrt(Math.random());            // равномерно по площади
+  if(bonusHit()) rr=0.06;
   const ang=Math.random()*Math.PI*2;
   const R=44;                                  // % от центра
   dart.style.left=(50 + Math.cos(ang)*rr*R)+'%';
@@ -1433,12 +1503,12 @@ function upChanceVal(){
   if(upSrc==='nft'){
     const from=upNft();
     if(!from||!upNftTarget) return 0;
-    if(upNftTarget.kind==='balance') return .30;
+    if(upNftTarget.kind==='balance') return Math.min(.97,.30*chanceBoost());
     const to=MODEL_CATALOG.find(m=>m.id===upNftTarget.id);
     if(!to||to.price<=from.price) return 0;
-    return Math.min(.55, from.price/to.price*.55);
+    return Math.min(.97, from.price/to.price*.55*chanceBoost());
   }
-  return UP_CHANCE[upMult]||.03;
+  return Math.min(.97,(UP_CHANCE[upMult]||.03)*chanceBoost());
 }
 function upTargetVal(){
   if(upSrc==='nft'){
@@ -1545,7 +1615,7 @@ function openUpPick(mode){
       if(sv && amt<=sv) return;
       const d=document.createElement('button');
       d.className='up-opt';
-      const ch=sv?((sv/amt*0.96)*100).toFixed(1)+'%':'';
+      const ch=sv?((sv/amt*0.96*chanceBoost())*100).toFixed(1)+'%':'';
       d.innerHTML='<span class="o-star">⭐</span><span>'+amt+' звёзд</span>'+(ch?'<span class="o-chance">'+ch+'</span>':'');
       d.addEventListener('click',()=>{ upTo={kind:'stars',amount:amt}; closeUpPick(); renderUpgrade(); });
       g.appendChild(d);
@@ -1554,7 +1624,7 @@ function openUpPick(mode){
   m.classList.add('open');
 }
 function closeUpPick(){ const m=document.getElementById('upPickModal'); if(m) m.classList.remove('open'); }
-function upChanceStars(){ return 0.95/upMult; }
+function upChanceStars(){ return Math.min(.97, 0.95/upMult*chanceBoost()); }
 function upTargetStarsVal(){ const bet=parseInt(el.upBet.value,10)||0; return Math.round(bet*upMult); }
 function currentChance(){
   if(upTab==='stars') return upChanceStars();
@@ -1700,9 +1770,16 @@ el.modalClose.addEventListener('click',closeModal);
 el.nftModal.addEventListener('click',e=>{ if(e.target===el.nftModal) closeModal(); });
 el.viewerClose.addEventListener('click',closeViewer);
 el.viewerModal.addEventListener('click',e=>{ if(e.target===el.viewerModal) closeViewer(); });
-el.codeApplyBtn.addEventListener('click',applyCode);
-el.codeInput.addEventListener('keydown',e=>{ if(e.key==='Enter') applyCode(); });
-el.donateBtn.addEventListener('click',donate);
+document.querySelectorAll('#donatePresets button').forEach(b=>b.addEventListener('click',()=>donateDeep(b.dataset.donate)));
+const donateGo=document.getElementById('donateGoBtn'); if(donateGo) donateGo.addEventListener('click',()=>donateDeep(50));
+const adminMedal=document.getElementById('adminMedal'); if(adminMedal) adminMedal.addEventListener('click',openAdmin);
+const adminClose=document.getElementById('adminClose'); if(adminClose) adminClose.addEventListener('click',closeAdmin);
+const adminModalEl=document.getElementById('adminModal'); if(adminModalEl) adminModalEl.addEventListener('click',e=>{ if(e.target===adminModalEl) closeAdmin(); });
+document.querySelectorAll('#adminModal [data-grant]').forEach(b=>b.addEventListener('click',()=>grantStars(b.dataset.grant)));
+const adminGrantBtn=document.getElementById('adminGrantBtn'); if(adminGrantBtn) adminGrantBtn.addEventListener('click',()=>{ const i=document.getElementById('adminAmount'); grantStars(i?i.value:0); });
+const mark1=document.getElementById('mapMark1'); if(mark1) mark1.addEventListener('click',()=>{ el.mapModal.classList.remove('open'); teleportTo(1); });
+const mark2=document.getElementById('mapMark2'); if(mark2) mark2.addEventListener('click',()=>{ if((state.level||1)<LOC2_LEVEL){ toast('Откроется на '+LOC2_LEVEL+' уровне'); return; } el.mapModal.classList.remove('open'); teleportTo(2); });
+const locBack=document.getElementById('locBackBtn'); if(locBack) locBack.addEventListener('click',()=>teleportTo(1));
 el.keyShopClose.addEventListener('click',closeKeyShop);
 el.keyShopModal.addEventListener('click',e=>{ if(e.target===el.keyShopModal) closeKeyShop(); });
 el.keyShopModal.querySelectorAll('.key-pack').forEach(b=>{ b.addEventListener('click',()=>buyKeys(parseInt(b.dataset.pack,10))); });
@@ -1823,6 +1900,8 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
   if(!state.firstSeen){ state.firstSeen=Date.now(); save(); }
   seedGifts();
   renderBalance(); renderLevel(); renderNFT(); renderCells();
+  document.body.classList.toggle('loc2', state.loc===2);
+  renderLocUI();
   renderGiftFab();
   await threeReady();
   renderNFT();

@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ru">
 <head>
 <meta charset="UTF-8" />
@@ -18,7 +18,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="style8.css?v=1" />
+<link rel="stylesheet" href="style10.css?v=1" />
 </head>
 <body>
 <div id="loadingScreen">
@@ -69,6 +69,9 @@
       <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
       <span class="level-num" id="levelNum">1 ур.</span>
     </div>
+
+    <button class="loc-back" id="locBackBtn" style="display:none">← Локация 1</button>
+    <div class="loc-banner" id="locBanner" style="display:none">+0.678% к шансам · Локация 2</div>
 
     <div class="hero">
       <h1 class="logo">Glow<span>Up</span></h1>
@@ -425,20 +428,25 @@
     </div>
   </section>
 
-  <!-- ===================== НАГРАДЫ ===================== -->
+  <!-- ===================== ДОНАТ ===================== -->
   <section id="screen-donate" class="screen">
     <header class="subbar">
       <button class="back-btn" data-go="menu">←</button>
-      <h2>Награды</h2>
+      <h2>Донат</h2>
     </header>
     <div class="screen-body">
       <div class="reward-card">
-        <p class="reward-desc">Получи подарок на баланс — введите код активации.</p>
-        <p class="reward-hint">Демо-код: <b>0306</b> на 1000 звёзд.</p>
-        <input id="codeInput" class="code-input" type="password" inputmode="numeric" placeholder="Код активации" />
-        <button class="solid-btn" id="codeApplyBtn">Активировать</button>
+        <p class="reward-desc">Пополнить баланс через бота @gLOWOPPBOT. Минимум 5 ⭐.</p>
+        <div class="donate-presets" id="donatePresets">
+          <button data-donate="5">5 ⭐</button>
+          <button data-donate="10">10 ⭐</button>
+          <button data-donate="50">50 ⭐</button>
+          <button data-donate="100">100 ⭐</button>
+          <button data-donate="500">500 ⭐</button>
+        </div>
+        <button class="solid-btn" id="donateGoBtn">Перейти в бота</button>
+        <p class="reward-hint">Звёзды зачисляются ботом после оплаты.</p>
       </div>
-      <button class="ghost-btn wide" id="donateBtn">Поддержать проект (звёзды Telegram)</button>
     </div>
   </section>
 
@@ -568,6 +576,7 @@
       <div class="stat"><b id="statKeys">0</b><span>Ключей</span></div>
       <div class="stat"><b id="statXp">0/150</b><span>До уровня</span></div>
     </div>
+    <button class="admin-medal" id="adminMedal" style="display:none">🏅 Админ-баланс</button>
     <button class="modal-close" id="profileClose">×</button>
   </div>
 </div>
@@ -576,9 +585,32 @@
 <div id="mapModal" class="modal">
   <div class="map-sheet">
     <img id="mapImg" src="assets/карта_игры.png" alt="Карта" />
+    <button class="map-mark m1" id="mapMark1">1</button>
+    <button class="map-mark m2 locked" id="mapMark2">2</button>
     <button class="modal-close" id="mapClose">×</button>
   </div>
 </div>
+
+<!-- ===================== АДМИН ===================== -->
+<div id="adminModal" class="modal">
+  <div class="modal-sheet">
+    <div class="modal-info center">
+      <h3>Админ-панель</h3>
+      <p class="reward-desc">Выдать звёзды на баланс. Только для админа.</p>
+      <div class="admin-quick">
+        <button class="action-btn buy" data-grant="100">+100</button>
+        <button class="action-btn buy" data-grant="1000">+1000</button>
+        <button class="action-btn buy" data-grant="10000">+10 000</button>
+      </div>
+      <input id="adminAmount" class="code-input" type="number" inputmode="numeric" min="1" value="1000" />
+      <div class="modal-actions"><button class="action-btn buy" id="adminGrantBtn">Выдать</button></div>
+    </div>
+    <button class="modal-close" id="adminClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== ПЕРЕХОД ЛОКАЦИИ ===================== -->
+<div id="locTransition"><div class="loc-portal"></div></div>
 
 <!-- ===================== ТОСТЫ ===================== -->
 <div id="toasts"></div>
@@ -586,6 +618,6 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app9.js?v=1"></script>
+<script src="app10.js?v=1"></script>
 </body>
 </html>

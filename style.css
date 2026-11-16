@@ -958,3 +958,39 @@ canvas{display:block}
 .up-nft-img.spin{ animation:upnftspin 1s linear infinite; }
 @keyframes upnftspin{ to{ transform:rotate(360deg); } }
 .up-nft-pick{ margin:4px 0 10px; }
+
+/* ===== админ / донат / локации ===== */
+.admin-medal{ margin:12px auto 0; display:none; align-items:center; gap:8px; background:linear-gradient(180deg,#ffd877,#e0a52e); color:#1a1206; border:0; border-radius:14px; padding:10px 16px; font-weight:900; box-shadow:0 8px 24px rgba(246,196,83,.35); }
+.admin-quick{ display:flex; gap:8px; margin:8px 0; }
+.admin-quick .action-btn{ flex:1; }
+.donate-presets{ display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin:10px 0; }
+.donate-presets button{ height:44px; border-radius:12px; background:#111c31; border:1px solid #24324e; color:#fff; font-weight:800; }
+.loc-banner{ position:relative; z-index:3; margin:4px 14px; padding:8px 12px; border-radius:12px; background:linear-gradient(90deg,#f6c453,#b8860b); color:#1a1206; font-weight:800; font-size:12px; text-align:center; display:flex; justify-content:center; }
+.loc-back{ position:relative; z-index:3; margin:6px 14px 0; align-self:flex-start; background:#111c31; border:1px solid #f6c453; color:#f6c453; border-radius:12px; padding:8px 12px; font-weight:700; font-size:12px; }
+.map-sheet{ position:relative; }
+.map-mark{ position:absolute; width:34px; height:34px; border-radius:50%; background:#1b2740; border:2px solid #55627a; color:#dbe4f2; font-weight:900; z-index:4; }
+.map-mark.m1{ left:14%; top:72%; border-color:#f6c453; color:#f6c453; }
+.map-mark.m2{ left:74%; top:26%; }
+.map-mark.locked{ opacity:.55; }
+.map-mark.gold{ background:linear-gradient(180deg,#ffd877,#d9a02c); color:#1a1206; border-color:#fff3c4; box-shadow:0 0 16px rgba(246,196,83,.6); }
+body.loc2 #menuBg{ background-image:url('assets/фон_меню.png') !important; filter:hue-rotate(20deg) saturate(1.15); }
+#locTransition{ position:fixed; inset:0; z-index:200; pointer-events:none; opacity:0; }
+#locTransition.play{ opacity:1; }
+.loc-portal{ position:absolute; inset:0; background:radial-gradient(circle at 50% 50%, rgba(246,196,83,.85), rgba(10,16,32,.92) 42%, rgba(10,16,32,0) 70%); transform:scale(0); }
+#locTransition.play .loc-portal{ animation:portal 1.4s ease-in-out forwards; }
+@keyframes portal{ 0%{ transform:scale(0);} 45%{ transform:scale(1.8);} 100%{ transform:scale(0);} }
+
+/* ===== раскладка второй локации ===== */
+.menu-grid.loc2-order .nav-card:nth-child(1){order:10}
+.menu-grid.loc2-order .nav-card:nth-child(2){order:9}
+.menu-grid.loc2-order .nav-card:nth-child(3){order:8}
+.menu-grid.loc2-order .nav-card:nth-child(4){order:7}
+.menu-grid.loc2-order .nav-card:nth-child(5){order:6}
+.menu-grid.loc2-order .nav-card:nth-child(6){order:5}
+.menu-grid.loc2-order .nav-card:nth-child(7){order:4}
+.menu-grid.loc2-order .nav-card:nth-child(8){order:3}
+.menu-grid.loc2-order .nav-card:nth-child(9){order:2}
+.menu-grid.loc2-order .nav-card:nth-child(10){order:1}
+body.loc2{ background:#0b1220; }
+body.loc2 .screen.active{ background:radial-gradient(120% 80% at 50% 0%, #1b2a4a, #0a1120 60%); }
+.menu-grid.loc2-order .nav-card{ border-color:rgba(246,196,83,.35); }
