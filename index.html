@@ -18,7 +18,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="style7.css?v=1" />
+<link rel="stylesheet" href="style8.css?v=1" />
 </head>
 <body>
 <div id="loadingScreen">
@@ -394,6 +394,7 @@
         <div class="up-ring-center">
           <div class="up-pct" id="upChancePct">0 %</div>
           <div class="up-pct-sub">шанс</div>
+          <img id="upNftImg" class="up-nft-img" alt="">
         </div>
         <div class="up-needle" id="upNeedle"></div>
         <div class="up-hint" id="upHint" style="display:none">Выберите цель</div>
@@ -438,6 +439,13 @@
     <div class="up-pick-modal" id="upBetModal">
       <div class="up-pick-sheet">
         <div class="up-pick-head"><b>Ваша ставка</b><button class="modal-close" id="upBetClose">×</button></div>
+        <div class="up-nft-pick" id="upBetNftWrap" style="display:none">
+          <button class="up-opt" id="upBetNft">
+            <img id="upBetNftImg" alt="">
+            <span id="upBetNftName">НФТ</span>
+            <span class="o-val" id="upBetNftPrice"></span>
+          </button>
+        </div>
         <input id="upBetInput" class="code-input" type="number" inputmode="numeric" min="1" value="50" />
         <div class="up-presets" id="upBetPresets">
           <button data-bet="10">10</button>
@@ -635,6 +643,6 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app7.js?v=1"></script>
+<script src="app8.js?v=3"></script>
 </body>
 </html>

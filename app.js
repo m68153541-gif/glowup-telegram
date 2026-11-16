@@ -1424,31 +1424,76 @@ function seedGifts(){
     state.giftStarter = true; save();
   }
 }
-let upBet=50, upMult=2, upBusy=false;
+let upBet=50, upMult=2, upBusy=false, upSrc='stars', upNftTarget=null;
 const UP_MULTS=[1.5,2,2.5,3,4,5,6,7,8,9,10];
+const UP_CHANCE={1.5:.40,2:.30,2.5:.22,3:.18,4:.12,5:.09,6:.07,7:.06,8:.05,9:.04,10:.035};
 const UP_RING_C=2*Math.PI*82;
-function upChanceVal(){ return Math.min(.96, 0.96/upMult); }
-function upTargetVal(){ return Math.max(Math.round(upBet*upMult), upBet+1); }
+function upNft(){ return state.userNFT? MODEL_CATALOG.find(m=>m.id===state.userNFT):null; }
+function upChanceVal(){
+  if(upSrc==='nft'){
+    const from=upNft();
+    if(!from||!upNftTarget) return 0;
+    if(upNftTarget.kind==='balance') return .30;
+    const to=MODEL_CATALOG.find(m=>m.id===upNftTarget.id);
+    if(!to||to.price<=from.price) return 0;
+    return Math.min(.55, from.price/to.price*.55);
+  }
+  return UP_CHANCE[upMult]||.03;
+}
+function upTargetVal(){
+  if(upSrc==='nft'){
+    const from=upNft(); if(!from) return 0;
+    if(upNftTarget&&upNftTarget.kind==='balance') return from.price;
+    const to=upNftTarget? MODEL_CATALOG.find(m=>m.id===upNftTarget.id):null;
+    return to? to.price:0;
+  }
+  return Math.max(Math.round(upBet*upMult), upBet+1);
+}
 function openBetModal(){
   const m=document.getElementById('upBetModal'); const inp=document.getElementById('upBetInput');
   if(inp){ inp.max=Math.max(1,state.stars); inp.value=upBet; }
+  const nft=upNft();
+  const wrap=document.getElementById('upBetNftWrap');
+  if(wrap) wrap.style.display = nft?'block':'none';
+  if(nft){
+    const img=document.getElementById('upBetNftImg'); if(img) img.src=nft.image;
+    const nm=document.getElementById('upBetNftName'); if(nm) nm.textContent=nft.name;
+    const pr=document.getElementById('upBetNftPrice'); if(pr) pr.textContent=nft.price+' ⭐';
+  }
   if(m) m.classList.add('open');
 }
 function closeBetModal(){ const m=document.getElementById('upBetModal'); if(m) m.classList.remove('open'); }
-function applyBet(v){ v=parseInt(v,10)||1; v=Math.max(1,v); if(state.stars>0 && v>state.stars) v=state.stars; upBet=v; closeBetModal(); renderUpgrade(); }
+function applyBet(v){ v=parseInt(v,10)||1; v=Math.max(1,v); if(state.stars>0 && v>state.stars) v=state.stars; upBet=v; upSrc='stars'; upNftTarget=null; closeBetModal(); renderUpgrade(); }
 function openTgtModal(){
   const m=document.getElementById('upTgtModal'), g=document.getElementById('upTgtGrid');
   if(!m||!g) return;
   g.innerHTML='';
-  UP_MULTS.forEach(M=>{
-    const payout=Math.max(Math.round(upBet*M), upBet+1);
-    const ch=(0.96/M*100);
-    const d=document.createElement('button');
-    d.className='up-opt';
-    d.innerHTML='<span>×'+M+'</span><span class="o-val">'+payout+' ⭐</span><span class="o-chance">'+ch.toFixed(1)+'%</span>';
-    d.addEventListener('click',()=>{ upMult=M; closeTgtModal(); renderUpgrade(); });
-    g.appendChild(d);
-  });
+  if(upSrc==='nft' && upNft()){
+    const from=upNft();
+    const bal=document.createElement('button');
+    bal.className='up-opt';
+    bal.innerHTML='<span>Баланс ×2</span><span class="o-val">+'+from.price+' ⭐</span><span class="o-chance">30%</span>';
+    bal.addEventListener('click',()=>{ upNftTarget={kind:'balance'}; closeTgtModal(); renderUpgrade(); });
+    g.appendChild(bal);
+    MODEL_CATALOG.filter(x=>x.price>from.price).forEach(x=>{
+      const ch=Math.min(55, from.price/x.price*55);
+      const d=document.createElement('button');
+      d.className='up-opt';
+      d.innerHTML='<img src="'+x.image+'" alt=""><span>'+x.name+'</span><span class="o-val">'+x.price+' ⭐</span><span class="o-chance">'+ch.toFixed(1)+'%</span>';
+      d.addEventListener('click',()=>{ upNftTarget={kind:'nft',id:x.id}; closeTgtModal(); renderUpgrade(); });
+      g.appendChild(d);
+    });
+  } else {
+    UP_MULTS.forEach(M=>{
+      const payout=Math.max(Math.round(upBet*M), upBet+1);
+      const ch=(UP_CHANCE[M]||.03)*100;
+      const d=document.createElement('button');
+      d.className='up-opt';
+      d.innerHTML='<span>×'+M+'</span><span class="o-val">'+payout+' ⭐</span><span class="o-chance">'+ch.toFixed(1)+'%</span>';
+      d.addEventListener('click',()=>{ upMult=M; closeTgtModal(); renderUpgrade(); });
+      g.appendChild(d);
+    });
+  }
   m.classList.add('open');
 }
 function closeTgtModal(){ const m=document.getElementById('upTgtModal'); if(m) m.classList.remove('open'); }
@@ -1561,36 +1606,75 @@ function renderGiftPicker(){
 }
 function renderUpgrade(){
   const bal=document.getElementById('upBalance'); if(bal) bal.textContent=state.stars;
+  const nft=upSrc==='nft'?upNft():null;
   const ch=upChanceVal(), pct=ch*100, pctTxt=(pct>0?pct.toFixed(2).replace('.',','):'0')+' %';
-  const cp=document.getElementById('upChancePct'); if(cp) cp.textContent=pctTxt;
-  const cl=document.getElementById('upChance'); if(cl) cl.textContent=pctTxt;
   const arc=document.getElementById('upRingArc'); if(arc) arc.style.strokeDasharray=(ch*UP_RING_C)+' '+UP_RING_C;
+  const cp=document.getElementById('upChancePct'); if(cp) cp.style.display=nft?'none':'block';
+  const cpSub=document.querySelector('.up-pct-sub'); if(cpSub) cpSub.style.display=nft?'none':'block';
+  const img=document.getElementById('upNftImg');
+  if(img){ img.style.display=nft?'block':'none'; if(nft) img.src=nft.image; }
+  const cl=document.getElementById('upChance'); if(cl) cl.textContent=pctTxt;
+  const cwrap=document.querySelector('.up-chance-line'); if(cwrap) cwrap.style.display=nft?'none':'block';
+  const sv=document.getElementById('upSrcVal'); const tv=document.getElementById('upTgtVal');
+  const amtRow=document.querySelector('.up-amount-row'); const chips=document.getElementById('upChips');
   const target=upTargetVal();
-  const sv=document.getElementById('upSrcVal'); if(sv) sv.textContent='Ставка '+upBet+' ⭐';
-  const tv=document.getElementById('upTgtVal'); if(tv) tv.textContent=target+' ⭐ · ×'+upMult;
-  const av=document.getElementById('upAmountVal'); if(av) av.textContent=upBet;
-  const sl=document.getElementById('upSlider'); if(sl){ sl.max=Math.max(1,state.stars); sl.value=Math.min(upBet,sl.max); }
-  document.querySelectorAll('.up-chip').forEach(b=>b.classList.toggle('active', parseFloat(b.dataset.mult)===upMult));
-  const sm=document.getElementById('upSummary'); if(sm) sm.textContent='Ставка '+upBet+' ⭐ → '+target+' ⭐ · шанс '+pctTxt;
-  const can=upBet>=1 && upBet<=state.stars;
+  if(nft){
+    if(sv) sv.textContent='НФТ: '+nft.name+' · '+nft.price+' ⭐';
+    if(upNftTarget){
+      if(upNftTarget.kind==='balance'){ if(tv) tv.textContent='Баланс +'+nft.price+' ⭐'; }
+      else { const t=MODEL_CATALOG.find(m=>m.id===upNftTarget.id); if(tv) tv.textContent=(t?t.name+' · '+t.price+' ⭐':''); }
+    } else { if(tv) tv.textContent='Выбрать цель'; }
+    if(amtRow) amtRow.style.display='none';
+    if(chips) chips.style.display='none';
+  } else {
+    if(sv) sv.textContent='Ставка '+upBet+' ⭐';
+    if(tv) tv.textContent=target+' ⭐ · ×'+upMult;
+    if(amtRow) amtRow.style.display='flex';
+    if(chips) chips.style.display='flex';
+    document.querySelectorAll('.up-chip').forEach(b=>b.classList.toggle('active', parseFloat(b.dataset.mult)===upMult));
+    const av=document.getElementById('upAmountVal'); if(av) av.textContent=upBet;
+    const sl=document.getElementById('upSlider'); if(sl){ sl.max=Math.max(1,state.stars); sl.value=Math.min(upBet,sl.max); }
+  }
+  const sm=document.getElementById('upSummary');
+  if(sm){
+    if(nft){ sm.textContent = upNftTarget? (upNftTarget.kind==='balance'?('НФТ на баланс: +'+nft.price+' ⭐'):('НФТ → '+((MODEL_CATALOG.find(m=>m.id===upNftTarget.id)||{}).name||''))) : 'Выберите, на что играете'; }
+    else { sm.textContent='Ставка '+upBet+' ⭐ → '+target+' ⭐ · шанс '+pctTxt; }
+  }
+  let can;
+  if(nft) can=!!upNftTarget; else can=(upBet>=1 && upBet<=state.stars);
   const go=document.getElementById('upGo'); if(go) go.disabled=!can;
-  const sub=document.getElementById('upGoSub'); if(sub) sub.textContent=!can?(state.stars<1?'пополните баланс':'недостаточно звёзд'):('шанс '+pctTxt+' · выиграешь '+target+' ⭐');
+  const sub=document.getElementById('upGoSub');
+  if(sub) sub.textContent = nft ? (upNftTarget?'НФТ на кону':'выберите цель') : (!can?(state.stars<1?'пополните баланс':'недостаточно звёзд'):('шанс '+pctTxt+' · выиграешь '+target+' ⭐'));
 }
 function doUpgrade(){
   if(upBusy) return;
-  if(upBet<1||upBet>state.stars){ toast(state.stars<1?'Пополните баланс':'Недостаточно звёзд'); return; }
-  const ch=upChanceVal(), chDeg=ch*360, target=upTargetVal();
-  upBusy=true; state.stars-=upBet; save(); renderBalance();
+  const ch=upChanceVal();
+  const nft=upSrc==='nft'?upNft():null;
+  if(nft){ if(!upNftTarget){ toast('Выберите цель'); return; } }
+  else if(upBet<1||upBet>state.stars){ toast(state.stars<1?'Пополните баланс':'Недостаточно звёзд'); return; }
+  const chDeg=ch*360, target=upTargetVal();
+  upBusy=true;
+  if(!nft){ state.stars-=upBet; save(); renderBalance(); }
   const win=Math.random()<ch;
   let deg;
   if(win){ deg=4+Math.random()*Math.max(1,chDeg-8); }
   else { deg=chDeg+6+Math.random()*Math.max(1,354-chDeg); }
   const needle=document.getElementById('upNeedle');
   if(needle){ needle.style.transition='none'; needle.style.transform='rotate(0deg)'; void needle.getBoundingClientRect(); needle.style.transition='transform 3s cubic-bezier(.15,.85,.15,1)'; needle.style.transform='rotate('+(5*360+deg)+'deg)'; }
+  const nimg=document.getElementById('upNftImg'); if(nimg) nimg.classList.add('spin');
   const go=document.getElementById('upGo'); if(go) go.disabled=true;
   setTimeout(()=>{
-    if(win){ state.stars+=target; if(typeof addXp==='function') addXp(target); save(); renderBalance(); toast('Победа! +'+target+' ⭐', true); }
-    else { toast('Проигрыш. Ставка сгорела'); }
+    if(nimg) nimg.classList.remove('spin');
+    if(nft){
+      if(win){
+        if(upNftTarget.kind==='balance'){ state.stars+=nft.price; if(typeof addXp==='function') addXp(nft.price); toast('Победа! +'+nft.price+' ⭐, НФТ остался', true); }
+        else { state.userNFT=upNftTarget.id; toast('Победа! Теперь у тебя '+((MODEL_CATALOG.find(m=>m.id===upNftTarget.id)||{}).name||'НФТ'), true); }
+      } else { state.userNFT=null; upSrc='stars'; upNftTarget=null; toast('Проигрыш. НФТ сгорел'); }
+      save(); renderBalance(); if(typeof renderNFT==='function') renderNFT();
+    } else {
+      if(win){ state.stars+=target; if(typeof addXp==='function') addXp(target); save(); renderBalance(); toast('Победа! +'+target+' ⭐', true); }
+      else { toast('Проигрыш. Ставка сгорела'); }
+    }
     upBusy=false; renderUpgrade();
   }, 3200);
 }
@@ -1685,6 +1769,8 @@ const upBetModalEl=document.getElementById('upBetModal');
 if(upBetModalEl) upBetModalEl.addEventListener('click',e=>{ if(e.target===upBetModalEl) closeBetModal(); });
 const upBetOkBtn=document.getElementById('upBetOk');
 if(upBetOkBtn) upBetOkBtn.addEventListener('click',()=>{ const inp=document.getElementById('upBetInput'); applyBet(inp?inp.value:upBet); });
+const upBetNftBtn=document.getElementById('upBetNft');
+if(upBetNftBtn) upBetNftBtn.addEventListener('click',()=>{ if(!upNft()) return; upSrc='nft'; upNftTarget=null; closeBetModal(); renderUpgrade(); });
 document.querySelectorAll('#upBetPresets button').forEach(b=>b.addEventListener('click',()=>applyBet(b.dataset.bet)));
 const upTgtCloseBtn=document.getElementById('upTgtClose');
 if(upTgtCloseBtn) upTgtCloseBtn.addEventListener('click',closeTgtModal);
