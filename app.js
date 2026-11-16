@@ -1424,8 +1424,72 @@ function seedGifts(){
     state.giftStarter = true; save();
   }
 }
-let upTab='stars', upMult=2, upFrom=null, upTo=null, upBusy=false;
+let upFrom=null, upTo=null, upStar=50, upBusy=false, upPickMode='src';
 const upLog=[];
+const UP_STAR_TARGETS=[100,500,1000,2500,5000];
+const UP_RING_C=2*Math.PI*82;
+function upVal(o){ if(!o) return 0; if(o.kind==='stars') return (o.amount!=null?o.amount:upStar); const g=giftById(o.id); return g?g.val:0; }
+function upFromVal(){ return upVal(upFrom); }
+function upToVal(){ return upVal(upTo); }
+function upChanceVal(){ const f=upFromVal(), t=upToVal(); if(!f||!t||t<=f) return 0; return Math.min(.96, f/t*0.96); }
+function upLabel(o){ if(!o) return null; if(o.kind==='stars') return (o.amount!=null?o.amount:upStar)+' ⭐'; const g=giftById(o.id); return g? g.name+' · '+g.val+' ⭐':null; }
+function renderUpQuick(){
+  const box=document.getElementById('upQuick'); if(!box) return;
+  box.innerHTML='';
+  const owned=GIFTS.filter(g=>giftCount(g.id)>0);
+  if(!owned.length){ box.style.display='none'; return; }
+  box.style.display='flex';
+  owned.slice(0,6).forEach(g=>{
+    const b=document.createElement('button');
+    b.className='up-qchip'+(upFrom&&upFrom.kind==='gift'&&upFrom.id===g.id?' sel':'');
+    b.innerHTML='<img src="'+g.img+'" alt=""><span>'+g.val+' ⭐</span><span class="q-mult">x2</span>';
+    b.addEventListener('click',()=>{ upFrom={kind:'gift',id:g.id}; if(upToVal()&&upToVal()<=g.val) upTo=null; renderUpgrade(); });
+    box.appendChild(b);
+  });
+}
+function openUpPick(mode){
+  upPickMode=mode;
+  const m=document.getElementById('upPickModal'), g=document.getElementById('upPickGrid'), t=document.getElementById('upPickTitle');
+  if(!m||!g) return;
+  if(t) t.textContent = mode==='src'?'Ваш подарок':'Хочу получить';
+  g.innerHTML='';
+  const sv=mode==='dst'?upFromVal():0;
+  GIFTS.forEach(gf=>{
+    if(mode==='src' && giftCount(gf.id)<=0) return;
+    if(mode==='dst' && sv && gf.val<=sv) return;
+    const d=document.createElement('button');
+    d.className='up-opt';
+    let extra='';
+    if(mode==='src') extra='<span class="o-cnt">×'+giftCount(gf.id)+'</span>';
+    else if(sv>0) extra='<span class="o-chance">'+((sv/gf.val*0.96)*100).toFixed(1)+'%</span>';
+    d.innerHTML='<img src="'+gf.img+'" alt=""><span>'+gf.name+'</span><span class="o-val">'+gf.val+' ⭐</span>'+extra;
+    d.addEventListener('click',()=>{
+      if(mode==='src'){ upFrom={kind:'gift',id:gf.id}; if(upToVal()&&upToVal()<=gf.val) upTo=null; }
+      else { upTo={kind:'gift',id:gf.id}; }
+      closeUpPick(); renderUpgrade();
+    });
+    g.appendChild(d);
+  });
+  if(mode==='src'){
+    const d=document.createElement('button');
+    d.className='up-opt';
+    d.innerHTML='<span class="o-star">⭐</span><span>Звёзды</span><span class="o-val">'+upStar+' ⭐</span>';
+    d.addEventListener('click',()=>{ upFrom={kind:'stars'}; closeUpPick(); renderUpgrade(); });
+    g.appendChild(d);
+  } else {
+    UP_STAR_TARGETS.forEach(amt=>{
+      if(sv && amt<=sv) return;
+      const d=document.createElement('button');
+      d.className='up-opt';
+      const ch=sv?((sv/amt*0.96)*100).toFixed(1)+'%':'';
+      d.innerHTML='<span class="o-star">⭐</span><span>'+amt+' звёзд</span>'+(ch?'<span class="o-chance">'+ch+'</span>':'');
+      d.addEventListener('click',()=>{ upTo={kind:'stars',amount:amt}; closeUpPick(); renderUpgrade(); });
+      g.appendChild(d);
+    });
+  }
+  m.classList.add('open');
+}
+function closeUpPick(){ const m=document.getElementById('upPickModal'); if(m) m.classList.remove('open'); }
 function upChanceStars(){ return 0.95/upMult; }
 function upTargetStarsVal(){ const bet=parseInt(el.upBet.value,10)||0; return Math.round(bet*upMult); }
 function currentChance(){
@@ -1477,47 +1541,51 @@ function renderGiftPicker(){
   }
 }
 function renderUpgrade(){
-  if(el.upBalance) el.upBalance.textContent=state.stars;
-  document.querySelectorAll('.up-mult').forEach(b=>b.classList.toggle('active', parseFloat(b.dataset.mult)===upMult));
-  if(el.upChanceStars) el.upChanceStars.textContent=(upChanceStars()*100).toFixed(1)+'%';
-  if(el.upTargetStars) el.upTargetStars.textContent=upTargetStarsVal();
-  const hub=document.querySelector('.up-hub');
-  if(hub) hub.textContent='×'+upMult;
-  updateDial();
-  renderUpHistory();
+  seedGifts();
+  const bal=document.getElementById('upBalance'); if(bal) bal.textContent=state.stars;
+  const ch=upChanceVal(), pct=ch*100, pctTxt=(pct>0?pct.toFixed(2).replace('.',','):'0')+' %';
+  const cp=document.getElementById('upChancePct'); if(cp) cp.textContent=pctTxt;
+  const cl=document.getElementById('upChance'); if(cl) cl.textContent=pctTxt;
+  const arc=document.getElementById('upRingArc'); if(arc) arc.style.strokeDasharray=(ch*UP_RING_C)+' '+UP_RING_C;
+  const hint=document.getElementById('upHint'); if(hint) hint.style.display=(upFrom&&upTo)?'none':'block';
+  const sv=document.getElementById('upSrcVal'); if(sv) sv.textContent=upLabel(upFrom)||'Выбрать подарок или ⭐';
+  const tv=document.getElementById('upTgtVal'); if(tv) tv.textContent=upLabel(upTo)||'Выбрать подарок';
+  const av=document.getElementById('upAmountVal'); if(av) av.textContent=upStar;
+  const sl=document.getElementById('upSlider'); if(sl){ sl.max=Math.max(100,state.stars); sl.value=Math.min(upStar,sl.max); }
+  const sm=document.getElementById('upSummary');
+  if(sm) sm.textContent=(upFrom&&upTo)?('Шанс '+pctTxt+' · выиграешь '+upLabel(upTo)):'Добавьте подарок или сумму с баланса';
+  const go=document.getElementById('upGo'); if(go) go.disabled=!(upFrom&&upTo&&ch>0);
+  const sub=document.getElementById('upGoSub');
+  if(sub) sub.textContent=(!upFrom||!upTo)?'выберите подарок':(ch>0?'шанс '+pct.toFixed(1)+' %':'цель должна быть дороже');
+  renderUpQuick();
 }
 function doUpgrade(){
   if(upBusy) return;
-  const bet=parseInt(el.upBet.value,10);
-  if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
-  if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
-  const ch=upChanceStars();
-  const target=Math.round(bet*upMult);
-  upBusy=true;
-  state.stars-=bet; save(); renderBalance(); if(el.upBalance) el.upBalance.textContent=state.stars;
-  const win=Math.random()<ch;
-  const chanceDeg=ch*360;
-  let finalDeg;
-  if(win){ finalDeg = 4 + Math.random()*Math.max(1,chanceDeg-8); }
-  else { finalDeg = chanceDeg + 6 + Math.random()*Math.max(1, 354-chanceDeg); }
-  const turns=5*360;
-  el.upPointer.style.transition='none';
-  el.upPointer.style.transform='rotate(0deg)';
-  void el.upPointer.offsetWidth;
-  el.upPointer.style.transition='transform 3.2s cubic-bezier(.15,.9,.15,1)';
-  el.upPointer.style.transform='rotate('+(turns+finalDeg)+'deg)';
+  const ch=upChanceVal();
+  if(!upFrom||!upTo||ch<=0){ toast('Выберите подарок и цель'); return; }
+  const from=upFrom, to=upTo;
+  if(from.kind==='stars'){ if(upStar>state.stars){ toast('Недостаточно звёзд'); return; } state.stars-=upStar; }
+  else { if(giftCount(from.id)<=0){ toast('Нет такого подарка'); return; } state.gifts[from.id]=(state.gifts[from.id]||0)-1; }
+  upBusy=true; save(); renderBalance();
+  const arc=document.getElementById('upRingArc');
+  if(arc){ arc.style.transition='none'; arc.style.strokeDasharray='0 '+UP_RING_C; void arc.getBoundingClientRect(); arc.style.transition='stroke-dasharray .9s ease'; arc.style.strokeDasharray=(ch*UP_RING_C)+' '+UP_RING_C; }
+  const go=document.getElementById('upGo'); if(go) go.disabled=true;
   setTimeout(()=>{
+    const win=Math.random()<ch;
     if(win){
-      state.stars+=target; save(); renderBalance(); if(el.upBalance) el.upBalance.textContent=state.stars;
-      toast('Победа! +'+target+' ⭐', true);
+      if(to.kind==='stars'){ state.stars+=to.amount; if(typeof addXp==='function') addXp(to.amount); }
+      else { state.gifts=state.gifts||{}; state.gifts[to.id]=(state.gifts[to.id]||0)+1; }
+      save(); renderBalance();
+      toast('Победа! '+(to.kind==='stars'? '+'+to.amount+' ⭐' : giftById(to.id).name), true);
     } else {
-      toast('Проигрыш. Ставка сгорела');
+      toast('Проигрыш. Предмет сгорел');
     }
-    upLog.push({ win:win, chance:ch, winVal:target+' ⭐', loseVal:bet+' ⭐' });
-    if(upLog.length>30) upLog.shift();
+    upLog.push({win:win, chance:ch});
+    if(upLog.length>20) upLog.shift();
     upBusy=false;
-    renderUpHistory();
-  }, 3300);
+    if(from.kind==='gift' && giftCount(from.id)<=0) upFrom=null;
+    renderUpgrade();
+  }, 1900);
 }
 
 /* =====================================================================
@@ -1598,10 +1666,32 @@ document.querySelectorAll('.dice-choice[data-hilo]').forEach(b=>b.addEventListen
 if(el.plinkoDrop) el.plinkoDrop.addEventListener('click',dropPlinko);
 
 // апгрейдер
-document.querySelectorAll('.up-tab').forEach(b=>b.addEventListener('click',()=>{ upTab=b.dataset.uptab; renderUpgrade(); }));
-document.querySelectorAll('.up-mult').forEach(b=>b.addEventListener('click',()=>{ upMult=parseFloat(b.dataset.mult); renderUpgrade(); }));
-if(el.upBet) el.upBet.addEventListener('input',()=>{ if(el.upTargetStars) el.upTargetStars.textContent=upTargetStarsVal(); });
-if(el.upGo) el.upGo.addEventListener('click',doUpgrade);
+const upPlusBtn=document.getElementById('upPlus');
+if(upPlusBtn) upPlusBtn.addEventListener('click',()=>openUpPick('src'));
+const upPickSrcBtn=document.getElementById('upPickSrc');
+if(upPickSrcBtn) upPickSrcBtn.addEventListener('click',()=>openUpPick('src'));
+const upPickTgtBtn=document.getElementById('upPickTgt');
+if(upPickTgtBtn) upPickTgtBtn.addEventListener('click',()=>openUpPick('dst'));
+const upPickCloseBtn=document.getElementById('upPickClose');
+if(upPickCloseBtn) upPickCloseBtn.addEventListener('click',closeUpPick);
+const upPickModalEl=document.getElementById('upPickModal');
+if(upPickModalEl) upPickModalEl.addEventListener('click',e=>{ if(e.target===upPickModalEl) closeUpPick(); });
+document.querySelectorAll('.up-chip').forEach(b=>b.addEventListener('click',()=>{
+  const c=b.dataset.chip;
+  if(c==='stars'){ upFrom={kind:'stars'}; }
+  else if(c==='gift'){ openUpPick('src'); return; }
+  else if(c==='x2'||c==='x4'||c==='x8'){
+    const m=parseFloat(c.slice(1));
+    const f=upFromVal();
+    if(f>0) upTo={kind:'stars',amount:Math.round(f*m)};
+    else { toast('Сначала выберите подарок'); return; }
+  }
+  renderUpgrade();
+}));
+const upSl=document.getElementById('upSlider');
+if(upSl) upSl.addEventListener('input',()=>{ upStar=Math.max(1,parseInt(upSl.value,10)||1); if(!upFrom||upFrom.kind==='stars') upFrom={kind:'stars'}; renderUpgrade(); });
+const upGoBtn=document.getElementById('upGo');
+if(upGoBtn) upGoBtn.addEventListener('click',doUpgrade);
 
 // ячейки: кнопки
 el.openOneBtn && el.openOneBtn.addEventListener('click',()=>{

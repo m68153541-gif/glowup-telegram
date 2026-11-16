@@ -18,7 +18,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="style5.css?v=1" />
+<link rel="stylesheet" href="style6.css?v=1" />
 </head>
 <body>
 <div id="loadingScreen">
@@ -375,37 +375,73 @@
 
   <!-- ===================== АПГРЕЙДЕР ===================== -->
   <section id="screen-upgrade" class="screen">
-    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_колесо.jpg')"></div>
-    <header class="subbar">
-      <button class="back-btn" data-go="menu">←</button>
-      <h2>Апгрейдер</h2>
-      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="upBalance">0</span></button>
+    <div class="screen-bg dim up-bg" style="background-image:url('assets/фон_игры_колесо.jpg')"></div>
+    <header class="up-top">
+      <button class="back-btn up-back" data-go="menu">←</button>
+      <span class="up-logo">Glow<span>Up</span></span>
+      <div class="up-top-right">
+        <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="upBalance">0</span></button>
+      </div>
     </header>
-    <div class="screen-body">
-      <div class="mines-row">
-        <label>Ставка</label>
-        <input id="upBet" class="code-input" type="number" inputmode="numeric" value="50" min="1" />
-      </div>
-      <div class="up-mults" id="upMults">
-        <button class="up-mult" data-mult="1.5">×1.5</button>
-        <button class="up-mult active" data-mult="2">×2</button>
-        <button class="up-mult" data-mult="3">×3</button>
-        <button class="up-mult" data-mult="5">×5</button>
-        <button class="up-mult" data-mult="10">×10</button>
-      </div>
-      <div class="up-chance">Шанс: <b id="upChanceStars">47.5%</b> · Получишь: <b id="upTargetStars">100</b> ⭐</div>
+    <div class="up-scroll">
+      <div class="up-quick" id="upQuick"></div>
 
-      <div class="up-dial-wrap">
-        <div class="up-dial" id="upDial">
-          <div class="up-sector" id="upSector"></div>
-          <div class="up-pointer" id="upPointer"></div>
-          <div class="up-hub">⬆️</div>
+      <div class="up-ring" id="upRing">
+        <svg class="up-ring-svg" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="up-ring-ticks" cx="100" cy="100" r="92"></circle>
+          <circle class="up-ring-track" cx="100" cy="100" r="82"></circle>
+          <circle class="up-ring-arc" id="upRingArc" cx="100" cy="100" r="82"></circle>
+        </svg>
+        <button class="up-plus" id="upPlus" type="button">+</button>
+        <div class="up-ring-center">
+          <div class="up-pct" id="upChancePct">0 %</div>
+          <div class="up-pct-sub">шанс</div>
         </div>
+        <div class="up-needle"></div>
+        <div class="up-hint" id="upHint">Выберите цель</div>
       </div>
 
-      <button class="solid-btn purple" id="upGo">Улучшить</button>
-      <p class="cells-note">Шанс = ставка / цель × 0.95. Выиграть можно, но трудно.</p>
-      <div class="up-history" id="upHistory"></div>
+      <div class="up-chance-line">Шанс улучшения <b id="upChance">0 %</b></div>
+
+      <div class="up-pair-row">
+        <button class="up-pair" id="upPickSrc">
+          <span class="up-pair-lbl">Ваш подарок</span>
+          <span class="up-pair-val" id="upSrcVal">Выбрать подарок или ⭐</span>
+        </button>
+        <span class="up-pair-arrow">→</span>
+        <button class="up-pair" id="upPickTgt">
+          <span class="up-pair-lbl">Хочу получить</span>
+          <span class="up-pair-val" id="upTgtVal">Выбрать подарок</span>
+        </button>
+      </div>
+
+      <div class="up-chips" id="upChips">
+        <button class="up-chip" data-chip="stars">⭐</button>
+        <button class="up-chip" data-chip="x2">×2</button>
+        <button class="up-chip" data-chip="x4">×4</button>
+        <button class="up-chip" data-chip="x8">×8</button>
+        <button class="up-chip" data-chip="gift">🎁</button>
+      </div>
+
+      <div class="up-amount-row">
+        <span class="up-mult-pill">× Множитель</span>
+        <span class="up-mult-pill up-bal-pill"><span class="bal-icon"></span><b id="upAmountVal">50</b></span>
+        <input class="up-slider" id="upSlider" type="range" min="1" max="1000" value="50" />
+      </div>
+
+      <div class="up-summary" id="upSummary">Добавьте подарок или сумму с баланса</div>
+
+      <button class="up-go" id="upGo" type="button" disabled>
+        <span class="up-go-main">Улучшить</span>
+        <span class="up-go-sub" id="upGoSub">выберите подарок</span>
+      </button>
+    </div>
+
+    <div class="up-pick-modal" id="upPickModal">
+      <div class="up-pick-sheet">
+        <div class="up-pick-head"><b id="upPickTitle">Выберите подарок</b><button class="modal-close" id="upPickClose">×</button></div>
+        <div class="up-pick-grid" id="upPickGrid"></div>
+      </div>
     </div>
   </section>
 
@@ -587,6 +623,6 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app5.js?v=1"></script>
+<script src="app6.js?v=1"></script>
 </body>
 </html>
