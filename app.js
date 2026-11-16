@@ -1,4 +1,4 @@
-/* =====================================================================
+﻿/* =====================================================================
    GLOW UP — Telegram Mini App (веб-версия)
    Меню, магазин 3D-НФТ, мины, ячейки, продажа. 3D через Three.js (локально).
    ===================================================================== */
@@ -390,6 +390,7 @@ function goto(name){
   if (!t) return;
   t.classList.add('active');
   if (name==='shop') renderShop();
+  if (name==='myNft') renderMyNft();
   if (name==='cells') renderCells();
   if (name==='mines') renderMines();
   if (name==='cases') renderCases();
@@ -693,6 +694,43 @@ function renderShop(){
     el.shopGrid.appendChild(c);
   });
 }
+
+/* ---------- Мои НФТ ---------- */
+function renderMyNft(){
+  const grid=document.getElementById('myNftGrid'); if(!grid) return;
+  grid.innerHTML='';
+  const ids=(state.owned||[]).slice();
+  if(!ids.length){
+    grid.innerHTML='<p class="cells-note">Пока пусто. Купи НФТ в «Магазине событий» — здесь появятся все твои.</p>';
+    return;
+  }
+  [...new Set(ids)].forEach(id=>{
+    const m=model(id); if(!m) return;
+    const cnt=ids.filter(x=>x===id).length;
+    const d=document.createElement('div'); d.className='item-card';
+    d.innerHTML = `
+      <div class="item-media">
+        <div class="poster-holder" style="position:absolute;inset:0;z-index:1;width:100%;height:100%"><img class="poster" src="${m.image}" alt="${m.name}" loading="lazy" style="width:100%;height:100%;object-fit:cover"/></div>
+      </div>
+      <div class="item-body">
+        <div class="item-name">${m.name}${cnt>1?' ×'+cnt:''}</div>
+        <div class="item-price"><span class="ic"></span>${m.price}</div>
+        <div class="item-actions">
+          <button class="mini-buy" data-equip="${m.id}">${state.userNFT===m.id?'На нике':'Поставить'}</button>
+          <button class="mini-3d" data-view="${m.id}">3D</button>
+        </div>
+      </div>`;
+    d.addEventListener('click',(e)=>{
+      const eq=e.target.closest('[data-equip]');
+      if(eq){ e.stopPropagation(); state.userNFT=eq.dataset.equip; save(); renderNFT(); renderMyNft(); toast('НФТ теперь рядом с ником',true); return; }
+      const v=e.target.closest('[data-view]');
+      if(v){ e.stopPropagation(); openViewer(v.dataset.view); return; }
+      e.stopPropagation(); openModal(id);
+    });
+    grid.appendChild(d);
+  });
+}
+
 function buyNFT(modelId){
   const m=model(modelId); if(!m) return;
   const owned = ownedCount(modelId)>0;
@@ -700,7 +738,7 @@ function buyNFT(modelId){
   state.stars -= m.price;
   state.owned.push(m.id);
   state.userNFT = modelId;        // купленная модель встаёт НФТ-чипом в 3D
-  save(); renderBalance(); renderShop(); renderNFT();
+  save(); renderBalance(); renderShop(); renderNFT(); renderMyNft();
   closeModal(); toast('Покупка успешна: '+m.name+' — теперь у тебя!', true);
 }
 
@@ -760,7 +798,7 @@ function sellToGame(modelId){
   state.owned.splice(idx,1);
   state.stars += low;
   if(state.userNFT===modelId) state.userNFT=null;
-  save(); renderBalance(); renderShop(); renderNFT(); closeModal();
+  save(); renderBalance(); renderShop(); renderNFT(); renderMyNft(); closeModal();
   toast('Продано игре за '+low+' ⭐');
 }
 function sellToMarket(modelId){
@@ -782,7 +820,7 @@ function confirmSellToMarket(){
   // пока рынка нет — просто возвращаем половину и помечаем
   state.stars += Math.round(p*0.5);
   if(state.userNFT===modelId) state.userNFT=null;
-  save(); renderBalance(); renderShop(); renderNFT(); closeModal(); closePriceModal();
+  save(); renderBalance(); renderShop(); renderNFT(); renderMyNft(); closeModal(); closePriceModal();
   toast('Модель продана. Рынок появится позже.');
 }
 function closePriceModal(){ el.priceModal.classList.remove('open'); el.priceInput._model=null; }
@@ -1781,9 +1819,21 @@ function doUpgrade(){
     if(nft){
       if(win){
         if(upNftTarget.kind==='balance'){ state.stars+=nft.price; if(typeof addXp==='function') addXp(nft.price); toast('Победа! +'+nft.price+' ⭐, НФТ остался', true); }
-        else { state.userNFT=upNftTarget.id; toast('Победа! Теперь у тебя '+((MODEL_CATALOG.find(m=>m.id===upNftTarget.id)||{}).name||'НФТ'), true); }
-      } else { state.userNFT=null; upSrc='stars'; upNftTarget=null; toast('Проигрыш. НФТ сгорел'); }
+        else {
+          state.userNFT=upNftTarget.id;
+          state.owned = state.owned || [];
+          if(!state.owned.includes(upNftTarget.id)) state.owned.push(upNftTarget.id);
+          toast('Победа! Теперь у тебя '+((MODEL_CATALOG.find(m=>m.id===upNftTarget.id)||{}).name||'НФТ'), true);
+        }
+      } else {
+        const lostId = state.userNFT;
+        if(lostId) state.owned = (state.owned||[]).filter(x=>x!==lostId);
+        state.userNFT=null; upSrc='stars'; upNftTarget=null;
+        toast('Проигрыш. НФТ ушла из коллекции — она осталась в «Магазине событий»');
+      }
       save(); renderBalance(); if(typeof renderNFT==='function') renderNFT();
+      if(typeof renderShop==='function') renderShop();
+      if(typeof renderMyNft==='function') renderMyNft();
     } else {
       if(win){ state.stars+=target; if(typeof addXp==='function') addXp(target); save(); renderBalance(); toast('Победа! +'+target+' ⭐', true); }
       else { toast('Проигрыш. Ставка сгорела'); }

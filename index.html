@@ -84,6 +84,11 @@
         <span class="card-ico ico-shop"></span>
         <span class="card-title">Магазин событий</span>
       </button>
+      <button class="nav-card" data-goto="myNft" style="--bg:url('assets/фон_модели_LerwaxiMi.png')">
+        <span class="card-shade"></span>
+        <span class="card-ico ico-shop"></span>
+        <span class="card-title">Мои НФТ</span>
+      </button>
       <button class="nav-card" data-goto="mines" style="--bg:url('assets/фон_игры_мины.jpg')">
         <span class="card-shade"></span>
         <span class="card-ico ico-mines"></span>
@@ -149,6 +154,20 @@
     </header>
     <div class="screen-body">
       <div class="card-grid" id="shopGrid"></div>
+    </div>
+  </section>
+
+  <!-- ===================== МОИ НФТ ===================== -->
+  <section id="screen-myNft" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_модели_LerwaxiMi.png')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Мои НФТ</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="balValMyNft">0</span></button>
+    </header>
+    <div class="screen-body">
+      <p class="cells-note">Все твои НФТ. Проигранная в апгрейдере НФТ уходит из коллекции, но остаётся в «Магазине событий».</p>
+      <div class="card-grid" id="myNftGrid"></div>
     </div>
   </section>
 
@@ -618,6 +637,6 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app11.js?v=1"></script>
+<script src="app12.js?v=1"></script>
 </body>
 </html>
