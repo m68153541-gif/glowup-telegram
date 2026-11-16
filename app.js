@@ -174,6 +174,7 @@ function initTelegram(){
       trackOnline(u.id);
       el.userName.textContent = u.first_name || 'Игрок';
       el.userHandle.textContent = u.username ? '@'+u.username : 'id '+u.id;
+      cloudPull(()=>{ try{ renderBalance(); renderLevel(); renderNFT(); renderCells(); renderLocUI(); }catch(_){} });
       if (u.photo_url){ el.avatarImg.src=u.photo_url; el.avatarImg.style.display='block'; el.avatarPh.style.display='none'; }
       try{
         // точный фон под Telegram
@@ -262,8 +263,50 @@ function donateDeep(amount){
   }catch(_){ window.open(url,'_blank'); }
 }
 
+// ---------- Облако (Telegram CloudStorage) ----------
+const CS_KEY='glowup_save_v1';
+function csApi(){ try{ return (window.Telegram && Telegram.WebApp && Telegram.WebApp.CloudStorage) || null; }catch(_){ return null; } }
+let csTimer=null;
+function slimState(){
+  const o=Object.assign({}, state);
+  delete o.onlineCount;
+  if(Array.isArray(o.cellsOpened) && o.cellsOpened.length>80) o.cellsOpened=o.cellsOpened.slice(-80);
+  return o;
+}
+function cloudPush(){
+  const cs=csApi(); if(!cs) return;
+  if(csTimer) clearTimeout(csTimer);
+  csTimer=setTimeout(()=>{
+    try{
+      let raw=JSON.stringify({t:Date.now(), s:slimState()});
+      if(raw.length>3800){
+        const s2=slimState(); delete s2.history; delete s2.upLog; delete s2.cellsOpened;
+        raw=JSON.stringify({t:Date.now(), s:s2});
+      }
+      if(raw.length>4000){ const s3=slimState(); delete s3.history; delete s3.upLog; delete s3.cellsOpened; delete s3.gifts; raw=JSON.stringify({t:Date.now(), s:s3}); }
+      cs.setItem(CS_KEY, raw, ()=>{});
+    }catch(_){}
+  }, 1200);
+}
+function cloudPull(after){
+  const cs=csApi(); if(!cs) return;
+  try{
+    cs.getItem(CS_KEY, (err, val)=>{
+      if(err || !val){ cloudPush(); return; }
+      try{
+        const o=JSON.parse(val);
+        if(o && o.s && (o.t||0) > (state.updatedAt||0)){
+          state = Object.assign({}, state, o.s);
+          try{ localStorage.setItem('es3d_v3', JSON.stringify(state)); }catch(_){}
+          if(typeof after==='function') after();
+        } else { cloudPush(); }
+      }catch(_){ cloudPush(); }
+    });
+  }catch(_){}
+}
+
 // ---------- Состояние ----------
-function save(){ try{ localStorage.setItem('es3d_v3', JSON.stringify(state)); }catch(_){} }
+function save(){ state.updatedAt=Date.now(); try{ localStorage.setItem('es3d_v3', JSON.stringify(state)); }catch(_){} cloudPush(); }
 function load(){
   try{
     const raw = localStorage.getItem('es3d_v3');
