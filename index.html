@@ -117,17 +117,6 @@
         <span class="card-ico card-emoji">🎯</span>
         <span class="card-title">Дартс</span>
       </button>
-      <button class="nav-card nav-hilo" data-goto="hilo" style="--bg:url('assets/фон_игры_выше_ниже.jpg')">
-        <span class="card-shade"></span>
-        <span class="card-ico card-emoji">🃏</span>
-        <span class="card-title">Выше-Ниже</span>
-      </button>
-      <button class="nav-card nav-plinko nav-locked" data-soon="plinko" style="--bg:url('assets/фон_игры_плинко.jpg')">
-        <span class="card-shade"></span>
-        <span class="card-ico card-emoji">🔵</span>
-        <span class="card-title">Плинко</span>
-        <span class="card-soon">Скоро</span>
-      </button>
       <button class="nav-card nav-upgrade" data-goto="upgrade" style="--bg:url('assets/фон_игры_колесо.jpg')">
         <span class="card-shade"></span>
         <span class="card-ico card-emoji">⬆️</span>
@@ -324,52 +313,6 @@
       </div>
       <button class="solid-btn purple" id="dartsThrow">Бросить дротик</button>
       <p class="cells-note">В яблочко — x8, ближе к центру — x2.5, дальше — меньше. Попасть в центр трудно, но можно.</p>
-    </div>
-  </section>
-
-  <!-- ===================== ВЫШЕ-НИЖЕ ===================== -->
-  <section id="screen-hilo" class="screen">
-    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_выше_ниже.jpg')"></div>
-    <header class="subbar">
-      <button class="back-btn" data-go="menu">←</button>
-      <h2>Выше-Ниже</h2>
-      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="hiloBalance">0</span></button>
-    </header>
-    <div class="screen-body">
-      <div class="hilo-stage">
-        <div class="card" id="hiloCur"></div>
-        <div class="hilo-arrow">→</div>
-        <div class="card back" id="hiloNext"></div>
-      </div>
-      <div class="dice-choices">
-        <button class="dice-choice" data-hilo="high">Выше<b>x1.9</b></button>
-        <button class="dice-choice" data-hilo="low">Ниже<b>x1.9</b></button>
-      </div>
-      <div class="mines-row" style="margin-top:14px">
-        <label>Ставка</label>
-        <input id="hiloBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
-      </div>
-      <button class="solid-btn purple" id="hiloPull">Тянуть карту</button>
-      <p class="cells-note">Угадай, будет ли следующая карта выше или ниже текущей. Равные — проигрыш. Верный прогноз — x1.9.</p>
-    </div>
-  </section>
-
-  <!-- ===================== ПЛИНКО ===================== -->
-  <section id="screen-plinko" class="screen">
-    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_плинко.jpg')"></div>
-    <header class="subbar">
-      <button class="back-btn" data-go="menu">←</button>
-      <h2>Плинко</h2>
-      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="plinkoBalance">0</span></button>
-    </header>
-    <div class="screen-body">
-      <div class="plinko-wrap"><canvas id="plinkoCanvas"></canvas></div>
-      <div class="mines-row" style="margin-top:10px">
-        <label>Ставка</label>
-        <input id="plinkoBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
-      </div>
-      <button class="solid-btn purple" id="plinkoDrop">Бросить шарик</button>
-      <p class="cells-note">Шарик падает по колышкам в лунку. Края — x8, центр — x0.3. Выиграть можно, но трудно.</p>
     </div>
   </section>
 
@@ -643,6 +586,6 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app8.js?v=3"></script>
+<script src="app9.js?v=1"></script>
 </body>
 </html>

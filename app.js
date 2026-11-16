@@ -1609,7 +1609,7 @@ function renderUpgrade(){
   const nft=upSrc==='nft'?upNft():null;
   const ch=upChanceVal(), pct=ch*100, pctTxt=(pct>0?pct.toFixed(2).replace('.',','):'0')+' %';
   const arc=document.getElementById('upRingArc'); if(arc) arc.style.strokeDasharray=(ch*UP_RING_C)+' '+UP_RING_C;
-  const cp=document.getElementById('upChancePct'); if(cp) cp.style.display=nft?'none':'block';
+  const cp=document.getElementById('upChancePct'); if(cp){ cp.style.display=nft?'none':'block'; cp.textContent=pctTxt; }
   const cpSub=document.querySelector('.up-pct-sub'); if(cpSub) cpSub.style.display=nft?'none':'block';
   const img=document.getElementById('upNftImg');
   if(img){ img.style.display=nft?'block':'none'; if(nft) img.src=nft.image; }
@@ -1660,7 +1660,7 @@ function doUpgrade(){
   if(win){ deg=4+Math.random()*Math.max(1,chDeg-8); }
   else { deg=chDeg+6+Math.random()*Math.max(1,354-chDeg); }
   const needle=document.getElementById('upNeedle');
-  if(needle){ needle.style.transition='none'; needle.style.transform='rotate(0deg)'; void needle.getBoundingClientRect(); needle.style.transition='transform 3s cubic-bezier(.15,.85,.15,1)'; needle.style.transform='rotate('+(5*360+deg)+'deg)'; }
+  if(needle){ needle.style.transition='none'; needle.style.transform='rotate(0deg)'; void needle.getBoundingClientRect(); needle.style.transition='transform 4.8s cubic-bezier(.06,.62,.08,1)'; needle.style.transform='rotate('+(8*360+deg)+'deg)'; }
   const nimg=document.getElementById('upNftImg'); if(nimg) nimg.classList.add('spin');
   const go=document.getElementById('upGo'); if(go) go.disabled=true;
   setTimeout(()=>{
@@ -1676,7 +1676,7 @@ function doUpgrade(){
       else { toast('Проигрыш. Ставка сгорела'); }
     }
     upBusy=false; renderUpgrade();
-  }, 3200);
+  }, 5000);
 }
 
 /* =====================================================================
