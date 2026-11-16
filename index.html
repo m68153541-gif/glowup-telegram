@@ -18,7 +18,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="style6.css?v=1" />
+<link rel="stylesheet" href="style7.css?v=1" />
 </head>
 <body>
 <div id="loadingScreen">
@@ -384,8 +384,6 @@
       </div>
     </header>
     <div class="up-scroll">
-      <div class="up-quick" id="upQuick"></div>
-
       <div class="up-ring" id="upRing">
         <svg class="up-ring-svg" viewBox="0 0 200 200" aria-hidden="true">
           <circle class="up-ring-ticks" cx="100" cy="100" r="92"></circle>
@@ -397,8 +395,8 @@
           <div class="up-pct" id="upChancePct">0 %</div>
           <div class="up-pct-sub">шанс</div>
         </div>
-        <div class="up-needle"></div>
-        <div class="up-hint" id="upHint">Выберите цель</div>
+        <div class="up-needle" id="upNeedle"></div>
+        <div class="up-hint" id="upHint" style="display:none">Выберите цель</div>
       </div>
 
       <div class="up-chance-line">Шанс улучшения <b id="upChance">0 %</b></div>
@@ -406,41 +404,55 @@
       <div class="up-pair-row">
         <button class="up-pair" id="upPickSrc">
           <span class="up-pair-lbl">Ваш подарок</span>
-          <span class="up-pair-val" id="upSrcVal">Выбрать подарок или ⭐</span>
+          <span class="up-pair-val" id="upSrcVal">Ставка 50 ⭐</span>
         </button>
         <span class="up-pair-arrow">→</span>
         <button class="up-pair" id="upPickTgt">
           <span class="up-pair-lbl">Хочу получить</span>
-          <span class="up-pair-val" id="upTgtVal">Выбрать подарок</span>
+          <span class="up-pair-val" id="upTgtVal">100 ⭐ · ×2</span>
         </button>
       </div>
 
       <div class="up-chips" id="upChips">
-        <button class="up-chip" data-chip="stars">⭐</button>
-        <button class="up-chip" data-chip="x2">×2</button>
-        <button class="up-chip" data-chip="x4">×4</button>
-        <button class="up-chip" data-chip="x8">×8</button>
-        <button class="up-chip" data-chip="gift">🎁</button>
+        <button class="up-chip" data-mult="1.5">×1.5</button>
+        <button class="up-chip active" data-mult="2">×2</button>
+        <button class="up-chip" data-mult="3">×3</button>
+        <button class="up-chip" data-mult="5">×5</button>
+        <button class="up-chip" data-mult="10">×10</button>
       </div>
 
       <div class="up-amount-row">
-        <span class="up-mult-pill">× Множитель</span>
+        <span class="up-mult-pill">Ставка</span>
         <span class="up-mult-pill up-bal-pill"><span class="bal-icon"></span><b id="upAmountVal">50</b></span>
         <input class="up-slider" id="upSlider" type="range" min="1" max="1000" value="50" />
       </div>
 
-      <div class="up-summary" id="upSummary">Добавьте подарок или сумму с баланса</div>
+      <div class="up-summary" id="upSummary">Ставка 50 ⭐ → 100 ⭐</div>
 
-      <button class="up-go" id="upGo" type="button" disabled>
+      <button class="up-go" id="upGo" type="button">
         <span class="up-go-main">Улучшить</span>
-        <span class="up-go-sub" id="upGoSub">выберите подарок</span>
+        <span class="up-go-sub" id="upGoSub">шанс 48.0 %</span>
       </button>
     </div>
 
-    <div class="up-pick-modal" id="upPickModal">
+    <div class="up-pick-modal" id="upBetModal">
       <div class="up-pick-sheet">
-        <div class="up-pick-head"><b id="upPickTitle">Выберите подарок</b><button class="modal-close" id="upPickClose">×</button></div>
-        <div class="up-pick-grid" id="upPickGrid"></div>
+        <div class="up-pick-head"><b>Ваша ставка</b><button class="modal-close" id="upBetClose">×</button></div>
+        <input id="upBetInput" class="code-input" type="number" inputmode="numeric" min="1" value="50" />
+        <div class="up-presets" id="upBetPresets">
+          <button data-bet="10">10</button>
+          <button data-bet="50">50</button>
+          <button data-bet="100">100</button>
+          <button data-bet="500">500</button>
+        </div>
+        <button class="up-go" id="upBetOk" type="button"><span class="up-go-main">Поставить</span></button>
+      </div>
+    </div>
+
+    <div class="up-pick-modal" id="upTgtModal">
+      <div class="up-pick-sheet">
+        <div class="up-pick-head"><b>Хочу получить</b><button class="modal-close" id="upTgtClose">×</button></div>
+        <div class="up-pick-grid" id="upTgtGrid"></div>
       </div>
     </div>
   </section>
@@ -623,6 +635,6 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app6.js?v=1"></script>
+<script src="app7.js?v=1"></script>
 </body>
 </html>

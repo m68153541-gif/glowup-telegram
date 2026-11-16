@@ -1424,15 +1424,34 @@ function seedGifts(){
     state.giftStarter = true; save();
   }
 }
-let upFrom=null, upTo=null, upStar=50, upBusy=false, upPickMode='src';
-const upLog=[];
-const UP_STAR_TARGETS=[100,500,1000,2500,5000];
+let upBet=50, upMult=2, upBusy=false;
+const UP_MULTS=[1.5,2,2.5,3,4,5,6,7,8,9,10];
 const UP_RING_C=2*Math.PI*82;
-function upVal(o){ if(!o) return 0; if(o.kind==='stars') return (o.amount!=null?o.amount:upStar); const g=giftById(o.id); return g?g.val:0; }
-function upFromVal(){ return upVal(upFrom); }
-function upToVal(){ return upVal(upTo); }
-function upChanceVal(){ const f=upFromVal(), t=upToVal(); if(!f||!t||t<=f) return 0; return Math.min(.96, f/t*0.96); }
-function upLabel(o){ if(!o) return null; if(o.kind==='stars') return (o.amount!=null?o.amount:upStar)+' ⭐'; const g=giftById(o.id); return g? g.name+' · '+g.val+' ⭐':null; }
+function upChanceVal(){ return Math.min(.96, 0.96/upMult); }
+function upTargetVal(){ return Math.max(Math.round(upBet*upMult), upBet+1); }
+function openBetModal(){
+  const m=document.getElementById('upBetModal'); const inp=document.getElementById('upBetInput');
+  if(inp){ inp.max=Math.max(1,state.stars); inp.value=upBet; }
+  if(m) m.classList.add('open');
+}
+function closeBetModal(){ const m=document.getElementById('upBetModal'); if(m) m.classList.remove('open'); }
+function applyBet(v){ v=parseInt(v,10)||1; v=Math.max(1,v); if(state.stars>0 && v>state.stars) v=state.stars; upBet=v; closeBetModal(); renderUpgrade(); }
+function openTgtModal(){
+  const m=document.getElementById('upTgtModal'), g=document.getElementById('upTgtGrid');
+  if(!m||!g) return;
+  g.innerHTML='';
+  UP_MULTS.forEach(M=>{
+    const payout=Math.max(Math.round(upBet*M), upBet+1);
+    const ch=(0.96/M*100);
+    const d=document.createElement('button');
+    d.className='up-opt';
+    d.innerHTML='<span>×'+M+'</span><span class="o-val">'+payout+' ⭐</span><span class="o-chance">'+ch.toFixed(1)+'%</span>';
+    d.addEventListener('click',()=>{ upMult=M; closeTgtModal(); renderUpgrade(); });
+    g.appendChild(d);
+  });
+  m.classList.add('open');
+}
+function closeTgtModal(){ const m=document.getElementById('upTgtModal'); if(m) m.classList.remove('open'); }
 function renderUpQuick(){
   const box=document.getElementById('upQuick'); if(!box) return;
   box.innerHTML='';
@@ -1541,51 +1560,39 @@ function renderGiftPicker(){
   }
 }
 function renderUpgrade(){
-  seedGifts();
   const bal=document.getElementById('upBalance'); if(bal) bal.textContent=state.stars;
   const ch=upChanceVal(), pct=ch*100, pctTxt=(pct>0?pct.toFixed(2).replace('.',','):'0')+' %';
   const cp=document.getElementById('upChancePct'); if(cp) cp.textContent=pctTxt;
   const cl=document.getElementById('upChance'); if(cl) cl.textContent=pctTxt;
   const arc=document.getElementById('upRingArc'); if(arc) arc.style.strokeDasharray=(ch*UP_RING_C)+' '+UP_RING_C;
-  const hint=document.getElementById('upHint'); if(hint) hint.style.display=(upFrom&&upTo)?'none':'block';
-  const sv=document.getElementById('upSrcVal'); if(sv) sv.textContent=upLabel(upFrom)||'Выбрать подарок или ⭐';
-  const tv=document.getElementById('upTgtVal'); if(tv) tv.textContent=upLabel(upTo)||'Выбрать подарок';
-  const av=document.getElementById('upAmountVal'); if(av) av.textContent=upStar;
-  const sl=document.getElementById('upSlider'); if(sl){ sl.max=Math.max(100,state.stars); sl.value=Math.min(upStar,sl.max); }
-  const sm=document.getElementById('upSummary');
-  if(sm) sm.textContent=(upFrom&&upTo)?('Шанс '+pctTxt+' · выиграешь '+upLabel(upTo)):'Добавьте подарок или сумму с баланса';
-  const go=document.getElementById('upGo'); if(go) go.disabled=!(upFrom&&upTo&&ch>0);
-  const sub=document.getElementById('upGoSub');
-  if(sub) sub.textContent=(!upFrom||!upTo)?'выберите подарок':(ch>0?'шанс '+pct.toFixed(1)+' %':'цель должна быть дороже');
-  renderUpQuick();
+  const target=upTargetVal();
+  const sv=document.getElementById('upSrcVal'); if(sv) sv.textContent='Ставка '+upBet+' ⭐';
+  const tv=document.getElementById('upTgtVal'); if(tv) tv.textContent=target+' ⭐ · ×'+upMult;
+  const av=document.getElementById('upAmountVal'); if(av) av.textContent=upBet;
+  const sl=document.getElementById('upSlider'); if(sl){ sl.max=Math.max(1,state.stars); sl.value=Math.min(upBet,sl.max); }
+  document.querySelectorAll('.up-chip').forEach(b=>b.classList.toggle('active', parseFloat(b.dataset.mult)===upMult));
+  const sm=document.getElementById('upSummary'); if(sm) sm.textContent='Ставка '+upBet+' ⭐ → '+target+' ⭐ · шанс '+pctTxt;
+  const can=upBet>=1 && upBet<=state.stars;
+  const go=document.getElementById('upGo'); if(go) go.disabled=!can;
+  const sub=document.getElementById('upGoSub'); if(sub) sub.textContent=!can?(state.stars<1?'пополните баланс':'недостаточно звёзд'):('шанс '+pctTxt+' · выиграешь '+target+' ⭐');
 }
 function doUpgrade(){
   if(upBusy) return;
-  const ch=upChanceVal();
-  if(!upFrom||!upTo||ch<=0){ toast('Выберите подарок и цель'); return; }
-  const from=upFrom, to=upTo;
-  if(from.kind==='stars'){ if(upStar>state.stars){ toast('Недостаточно звёзд'); return; } state.stars-=upStar; }
-  else { if(giftCount(from.id)<=0){ toast('Нет такого подарка'); return; } state.gifts[from.id]=(state.gifts[from.id]||0)-1; }
-  upBusy=true; save(); renderBalance();
-  const arc=document.getElementById('upRingArc');
-  if(arc){ arc.style.transition='none'; arc.style.strokeDasharray='0 '+UP_RING_C; void arc.getBoundingClientRect(); arc.style.transition='stroke-dasharray .9s ease'; arc.style.strokeDasharray=(ch*UP_RING_C)+' '+UP_RING_C; }
+  if(upBet<1||upBet>state.stars){ toast(state.stars<1?'Пополните баланс':'Недостаточно звёзд'); return; }
+  const ch=upChanceVal(), chDeg=ch*360, target=upTargetVal();
+  upBusy=true; state.stars-=upBet; save(); renderBalance();
+  const win=Math.random()<ch;
+  let deg;
+  if(win){ deg=4+Math.random()*Math.max(1,chDeg-8); }
+  else { deg=chDeg+6+Math.random()*Math.max(1,354-chDeg); }
+  const needle=document.getElementById('upNeedle');
+  if(needle){ needle.style.transition='none'; needle.style.transform='rotate(0deg)'; void needle.getBoundingClientRect(); needle.style.transition='transform 3s cubic-bezier(.15,.85,.15,1)'; needle.style.transform='rotate('+(5*360+deg)+'deg)'; }
   const go=document.getElementById('upGo'); if(go) go.disabled=true;
   setTimeout(()=>{
-    const win=Math.random()<ch;
-    if(win){
-      if(to.kind==='stars'){ state.stars+=to.amount; if(typeof addXp==='function') addXp(to.amount); }
-      else { state.gifts=state.gifts||{}; state.gifts[to.id]=(state.gifts[to.id]||0)+1; }
-      save(); renderBalance();
-      toast('Победа! '+(to.kind==='stars'? '+'+to.amount+' ⭐' : giftById(to.id).name), true);
-    } else {
-      toast('Проигрыш. Предмет сгорел');
-    }
-    upLog.push({win:win, chance:ch});
-    if(upLog.length>20) upLog.shift();
-    upBusy=false;
-    if(from.kind==='gift' && giftCount(from.id)<=0) upFrom=null;
-    renderUpgrade();
-  }, 1900);
+    if(win){ state.stars+=target; if(typeof addXp==='function') addXp(target); save(); renderBalance(); toast('Победа! +'+target+' ⭐', true); }
+    else { toast('Проигрыш. Ставка сгорела'); }
+    upBusy=false; renderUpgrade();
+  }, 3200);
 }
 
 /* =====================================================================
@@ -1667,29 +1674,25 @@ if(el.plinkoDrop) el.plinkoDrop.addEventListener('click',dropPlinko);
 
 // апгрейдер
 const upPlusBtn=document.getElementById('upPlus');
-if(upPlusBtn) upPlusBtn.addEventListener('click',()=>openUpPick('src'));
+if(upPlusBtn) upPlusBtn.addEventListener('click',openBetModal);
 const upPickSrcBtn=document.getElementById('upPickSrc');
-if(upPickSrcBtn) upPickSrcBtn.addEventListener('click',()=>openUpPick('src'));
+if(upPickSrcBtn) upPickSrcBtn.addEventListener('click',openBetModal);
 const upPickTgtBtn=document.getElementById('upPickTgt');
-if(upPickTgtBtn) upPickTgtBtn.addEventListener('click',()=>openUpPick('dst'));
-const upPickCloseBtn=document.getElementById('upPickClose');
-if(upPickCloseBtn) upPickCloseBtn.addEventListener('click',closeUpPick);
-const upPickModalEl=document.getElementById('upPickModal');
-if(upPickModalEl) upPickModalEl.addEventListener('click',e=>{ if(e.target===upPickModalEl) closeUpPick(); });
-document.querySelectorAll('.up-chip').forEach(b=>b.addEventListener('click',()=>{
-  const c=b.dataset.chip;
-  if(c==='stars'){ upFrom={kind:'stars'}; }
-  else if(c==='gift'){ openUpPick('src'); return; }
-  else if(c==='x2'||c==='x4'||c==='x8'){
-    const m=parseFloat(c.slice(1));
-    const f=upFromVal();
-    if(f>0) upTo={kind:'stars',amount:Math.round(f*m)};
-    else { toast('Сначала выберите подарок'); return; }
-  }
-  renderUpgrade();
-}));
+if(upPickTgtBtn) upPickTgtBtn.addEventListener('click',openTgtModal);
+const upBetCloseBtn=document.getElementById('upBetClose');
+if(upBetCloseBtn) upBetCloseBtn.addEventListener('click',closeBetModal);
+const upBetModalEl=document.getElementById('upBetModal');
+if(upBetModalEl) upBetModalEl.addEventListener('click',e=>{ if(e.target===upBetModalEl) closeBetModal(); });
+const upBetOkBtn=document.getElementById('upBetOk');
+if(upBetOkBtn) upBetOkBtn.addEventListener('click',()=>{ const inp=document.getElementById('upBetInput'); applyBet(inp?inp.value:upBet); });
+document.querySelectorAll('#upBetPresets button').forEach(b=>b.addEventListener('click',()=>applyBet(b.dataset.bet)));
+const upTgtCloseBtn=document.getElementById('upTgtClose');
+if(upTgtCloseBtn) upTgtCloseBtn.addEventListener('click',closeTgtModal);
+const upTgtModalEl=document.getElementById('upTgtModal');
+if(upTgtModalEl) upTgtModalEl.addEventListener('click',e=>{ if(e.target===upTgtModalEl) closeTgtModal(); });
+document.querySelectorAll('.up-chip').forEach(b=>b.addEventListener('click',()=>{ const m=parseFloat(b.dataset.mult); if(m) upMult=m; renderUpgrade(); }));
 const upSl=document.getElementById('upSlider');
-if(upSl) upSl.addEventListener('input',()=>{ upStar=Math.max(1,parseInt(upSl.value,10)||1); if(!upFrom||upFrom.kind==='stars') upFrom={kind:'stars'}; renderUpgrade(); });
+if(upSl) upSl.addEventListener('input',()=>{ upBet=Math.max(1,parseInt(upSl.value,10)||1); if(state.stars>0 && upBet>state.stars) upBet=state.stars; renderUpgrade(); });
 const upGoBtn=document.getElementById('upGo');
 if(upGoBtn) upGoBtn.addEventListener('click',doUpgrade);
 

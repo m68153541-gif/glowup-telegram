@@ -945,3 +945,10 @@ canvas{display:block}
 .up-opt .o-chance{ margin-left:auto; font-size:11px; color:#8b96ab; }
 .up-opt .o-cnt{ font-size:10px; color:#8b96ab; }
 .up-opt .o-star{ font-size:22px; }
+
+/* апгрейдер v3 — вращающаяся стрелка и модалки */
+.up-needle{ position:absolute; inset:0; width:auto; height:auto; border:0; background:none; pointer-events:none; transform-origin:50% 50%; }
+.up-needle::after{ content:''; position:absolute; left:50%; bottom:-10px; transform:translateX(-50%); border-left:9px solid transparent; border-right:9px solid transparent; border-bottom:18px solid #f6c453; filter:drop-shadow(0 0 6px rgba(246,196,83,.55)); }
+.up-presets{ display:flex; gap:8px; margin:10px 0 14px; }
+.up-presets button{ flex:1; height:40px; border-radius:10px; background:#111c31; border:1px solid #24324e; color:#fff; font-weight:700; }
+#upBetInput{ width:100%; }
