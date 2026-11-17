@@ -248,7 +248,7 @@ function grantStars(v){
   toast('+'+v+' ⭐ зачислено', true);
 }
 // ---------- Глобальные действия админа (работают через общую базу) ----------
-const CLOUD_DB = { url:'', key:'' };
+const CLOUD_DB = { url:'https://dgelzeuxzazlxuxlwutb.supabase.co', key:'sb_publishable_-5tf1_GUjg2Kga0pA9jyvw_5wX71812' };
 function dbReady(){ return !!(CLOUD_DB.url && CLOUD_DB.key); }
 function dbHeaders(){
   return {
@@ -2020,6 +2020,7 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
   renderShop();
   updateMyNftCount();
   syncGlobalControl();
+  setInterval(syncGlobalControl, 60000);
   renderMines();
   setTimeout(hideLoad, 350);
   // ежесекундное обновление подарка (иконка в меню + таймер на экране)
