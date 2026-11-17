@@ -1598,7 +1598,7 @@ function seedGifts(){
 }
 let upBet=50, upMult=2, upBusy=false, upSrc='stars', upNftTarget=null;
 const UP_MULTS=[1.5,2,2.5,3,4,5,6,7,8,9,10];
-const UP_CHANCE={1.5:.40,2:.30,2.5:.22,3:.18,4:.12,5:.09,6:.07,7:.06,8:.05,9:.04,10:.035};
+const UP_CHANCE={1.5:.50,2:.50,2.5:.40,3:.33,4:.25,5:.20,6:.17,7:.14,8:.13,9:.11,10:.10};
 const UP_RING_C=2*Math.PI*82;
 function upNft(){ return state.userNFT? MODEL_CATALOG.find(m=>m.id===state.userNFT):null; }
 function upChanceVal(){
