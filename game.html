@@ -1,0 +1,643 @@
+﻿<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>GlowUp</title>
+<meta name="theme-color" content="#0a0a0f" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;700;900&display=swap" rel="stylesheet" />
+<!-- Официальный Telegram WebApp SDK: даёт имя, юзернейм, аватар и нативные кнопки -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "./assets/vendor/three.module.js",
+    "three/addons/": "./assets/vendor/"
+  }
+}
+</script>
+<link rel="stylesheet" href="style12.css?v=1" />
+</head>
+<body>
+<div id="loadingScreen">
+  <div class="load-inner">
+    <div class="load-logo">Glow<span>Up</span></div>
+    <div class="load-spinner"></div>
+    <div class="load-tip">Загрузка…</div>
+  </div>
+</div>
+<div id="app">
+  <!-- ===================== ГЛАВНОЕ МЕНЮ ===================== -->
+  <section id="screen-menu" class="screen active">
+    <div class="screen-bg" id="menuBg" style="background-image:url('assets/фон_меню_тёмный.jpg')"></div>
+    <div class="ambient-orb"></div>
+
+    <header class="topbar">
+      <!-- Кнопка карты рядом с подарком -->
+      <button class="gift-fab" id="mapBtn" title="Карта">
+        <span class="gift-fab-ico">🗺️</span>
+      </button>
+      <!-- Подарок: иконка в шапке слева, горит когда доступен -->
+      <button class="gift-fab" id="giftFab" title="Ежедневный подарок">
+        <span class="gift-fab-ico">🎁</span>
+        <span class="gift-fab-dot"></span>
+      </button>
+      <div class="userchip">
+        <div class="user-avatar" id="avatar">
+          <img id="avatarImg" alt="" style="display:none" />
+          <span class="ph" id="avatarPh">З</span>
+        </div>
+        <div class="user-meta">
+          <span class="user-name" id="userName">Игрок</span>
+          <span class="user-handle" id="userHandle">@player</span>
+        </div>
+      </div>
+      <!-- НФТ у ника: полноценная 3D, клик -> просмотр -->
+      <div class="nft-chip" id="nftChip" data-id="" title="Открыть НФТ">
+        <div id="nftCanvas"></div>
+        <span class="nft-chip-badge" id="nftChipBadge">НФТ</span>
+      </div>
+      <button class="bal-btn" id="balBtn">
+        <span class="bal-icon"></span>
+        <span class="bal-val" id="balVal">0</span>
+      </button>
+    </header>
+
+    <div class="level-strip">
+      <div class="level-bar"><div class="level-fill" id="levelFill"></div></div>
+      <span class="level-num" id="levelNum">1 ур.</span>
+    </div>
+
+    <button class="loc-back" id="locBackBtn" style="display:none">← Локация 1</button>
+    <div class="loc-banner" id="locBanner" style="display:none">+0.678% к шансам · Локация 2</div>
+
+    <div class="hero">
+      <h1 class="logo">Glow<span>Up</span></h1>
+      <p class="tagline">3D НФТ и игры</p>
+    </div>
+
+    <nav class="menu-grid">
+      <button class="nav-card" data-goto="shop" style="--bg:url('assets/фон_модели_DianaLovis.png')">
+        <span class="card-shade"></span>
+        <span class="card-ico ico-shop"></span>
+        <span class="card-title">Магазин событий</span>
+      </button>
+      <button class="nav-card" data-goto="myNft" style="--bg:url('assets/фон_модели_LerwaxiMi.png')">
+        <span class="card-shade"></span>
+        <span class="card-ico ico-shop"></span>
+        <span class="card-title">Мои модели</span>
+        <span class="nav-count" id="myNftCount" hidden>0</span>
+      </button>
+      <button class="nav-card" data-goto="mines" style="--bg:url('assets/фон_игры_мины.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico ico-mines"></span>
+        <span class="card-title">Мины</span>
+      </button>
+      <button class="nav-card" data-goto="cells" style="--bg:url('assets/фон_игры_ячейки.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico ico-cells"></span>
+        <span class="card-title">Ячейки</span>
+        <span class="card-badge" data-badge="keys">0 🔑</span>
+      </button>
+      <button class="nav-card nav-cases" data-goto="cases" style="--bg:url('assets/фон_игры_кейсы.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico card-emoji">🎁</span>
+        <span class="card-title">Кейсы</span>
+      </button>
+      <button class="nav-card nav-wheel" data-goto="wheel" style="--bg:url('assets/фон_игры_колесо.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico card-emoji">🎡</span>
+        <span class="card-title">Колесо</span>
+      </button>
+      <button class="nav-card nav-cups" data-goto="cups" style="--bg:url('assets/фон_игры_напёрстки.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico card-emoji">🥤</span>
+        <span class="card-title">Напёрстки</span>
+      </button>
+      <button class="nav-card nav-dice" data-goto="dice" style="--bg:url('assets/фон_игры_кости.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico card-emoji">🎲</span>
+        <span class="card-title">Кости удачи</span>
+      </button>
+      <button class="nav-card nav-darts" data-goto="darts" style="--bg:url('assets/фон_игры_дартс.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico card-emoji">🎯</span>
+        <span class="card-title">Дартс</span>
+      </button>
+      <button class="nav-card nav-upgrade" data-goto="upgrade" style="--bg:url('assets/фон_игры_колесо.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico card-emoji">⬆️</span>
+        <span class="card-title">Апгрейдер</span>
+      </button>
+      <button class="nav-card nav-market" style="--bg:url('assets/фон_игры_рынок.jpg')">
+        <span class="card-shade"></span>
+        <span class="card-ico ico-market"></span>
+        <span class="card-title">Рынок</span>
+        <span class="card-soon">Скоро</span>
+      </button>
+    </nav>
+
+    <footer class="menu-foot">
+      <button class="ghost-btn" data-goto="donate">Награды</button>
+      <button class="ghost-btn" data-goto="howto">Как играть</button>
+    </footer>
+  </section>
+
+  <!-- ===================== МАГАЗИН ===================== -->
+  <section id="screen-shop" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_модели_DianaLovis.png')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Магазин событий</h2>
+      <button class="bal-btn small" id="balBtnShop"><span class="bal-icon"></span><span class="bal-val" id="balValShop">0</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="card-grid" id="shopGrid"></div>
+    </div>
+  </section>
+
+  <!-- ===================== МОИ НФТ ===================== -->
+  <section id="screen-myNft" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_модели_LerwaxiMi.png')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Мои НФТ</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="balValMyNft">0</span></button>
+    </header>
+    <div class="screen-body">
+      <p class="cells-note">Все твои НФТ. Проигранная в апгрейдере НФТ уходит из коллекции, но остаётся в «Магазине событий».</p>
+      <div class="card-grid" id="myNftGrid"></div>
+    </div>
+  </section>
+
+  <!-- ===================== МИНЫ ===================== -->
+  <section id="screen-mines" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_мины.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Мины</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="minesBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <p class="cells-note">Ставь звёзды, открывай клетки и уходи от мин. Чем больше откроешь — тем больше множитель.</p>
+      <div class="mines-controls">
+        <div class="mines-row">
+          <label>Ставка</label>
+          <input id="minesBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
+        </div>
+        <div class="mines-row">
+          <label>Мины</label>
+          <div class="mine-count">
+            <button class="mine-count-btn active" data-mines="1">1</button>
+            <button class="mine-count-btn" data-mines="3">3</button>
+            <button class="mine-count-btn" data-mines="5">5</button>
+          </div>
+        </div>
+        <button class="solid-btn" id="minesStart">Играть</button>
+      </div>
+      <div class="mines-board">
+        <div class="mines-grid" id="minesGrid"></div>
+        <div class="mines-footer">
+          <div class="mines-mult">Множитель: <b id="minesMultiplier">x1.0</b></div>
+          <button class="solid-btn purple" id="minesCashout" disabled>Забрать выигрыш</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ЯЧЕЙКИ ===================== -->
+  <section id="screen-cells" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_ячейки.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Ячейки</h2>
+      <button class="keys-pill" id="keyBtnTop"><span id="keyCountTop">0</span> 🔑 <span class="keys-plus">+</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="cell-timer-row">
+        <span class="cell-timer" id="cellTimer">Обновление через: --:--:--</span>
+      </div>
+      <p class="cells-note">30 ячеек. Внутри — ключи, звёзды и два джекпота по 300–500 ⭐! Ячейки обновляются каждый день в 14:00 (МСК).</p>
+      <div class="cells-rack" id="cellsRack"></div>
+      <div class="cells-actions">
+        <button class="solid-btn purple" id="openOneBtn">Открыть ячейку (1 🔑)</button>
+        <button class="solid-btn" id="keyShopBtn">Купить ключи</button>
+        <button class="ghost-btn wide" id="cellResetBtn">Обновить ячейки (300 ⭐)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== КЕЙСЫ ===================== -->
+  <section id="screen-cases" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_кейсы.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Кейсы</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="casesBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <p class="cells-note">Открывай кейсы за звёзды. Внутри всегда что-то есть — звёзды или ключи. Окупиться трудно, но иногда везёт по-крупному.</p>
+      <div class="case-grid" id="caseGrid"></div>
+    </div>
+  </section>
+
+  <!-- ===================== КОЛЕСО ===================== -->
+  <section id="screen-wheel" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_колесо.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Колесо удачи</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="wheelBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="wheel-stage">
+        <div class="wheel-pointer"></div>
+        <div class="wheel" id="wheel"><span class="wheel-hub">⭐</span></div>
+      </div>
+      <div class="mines-row" style="margin-top:16px">
+        <label>Ставка</label>
+        <input id="wheelBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
+      </div>
+      <button class="solid-btn purple" id="wheelSpin">Крутить</button>
+      <p class="cells-note">Множитель от x0.1 до x3. Чаще выпадает меньше ставки — крути на удачу.</p>
+    </div>
+  </section>
+
+  <!-- ===================== НАПЁРСТКИ ===================== -->
+  <section id="screen-cups" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_напёрстки.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Напёрстки</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="cupsBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <p class="cells-note">Шарик прячется под одним из стаканов. Угадаешь — x2.6 к ставке. Шанс 1 из 3.</p>
+      <div class="cups-stage">
+        <div class="cups-row" id="cupsRow">
+          <button class="cup" data-slot="0"><span class="cup-ico">🥤</span><span class="cup-ball">🔴</span></button>
+          <button class="cup" data-slot="1"><span class="cup-ico">🥤</span><span class="cup-ball">🔴</span></button>
+          <button class="cup" data-slot="2"><span class="cup-ico">🥤</span><span class="cup-ball">🔴</span></button>
+        </div>
+      </div>
+      <div class="mines-row" style="margin-top:16px">
+        <label>Ставка</label>
+        <input id="cupsBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
+      </div>
+      <button class="solid-btn purple" id="cupsStart">Играть</button>
+      <p class="cells-note" id="cupsHint">Нажми «Играть», запомни стакан с шариком и угадай после перемешивания.</p>
+    </div>
+  </section>
+
+  <!-- ===================== КОСТИ ===================== -->
+  <section id="screen-dice" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_кости.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Кости удачи</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="diceBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="dice-stage">
+        <div class="die" id="dice1"></div>
+        <div class="die" id="dice2"></div>
+      </div>
+      <div class="dice-choices">
+        <button class="dice-choice" data-pick="low">Меньше 7<b>x1.9</b></button>
+        <button class="dice-choice" data-pick="seven">Ровно 7<b>x4.5</b></button>
+        <button class="dice-choice" data-pick="high">Больше 7<b>x1.9</b></button>
+      </div>
+      <div class="mines-row" style="margin-top:14px">
+        <label>Ставка</label>
+        <input id="diceBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
+      </div>
+      <button class="solid-btn purple" id="diceRoll">Бросить кости</button>
+      <p class="cells-note">Выбери исход и бросай. Меньше/больше 7 — x1.9, ровно 7 — x4.5. Выигрывать трудно, но можно.</p>
+    </div>
+  </section>
+
+  <!-- ===================== ДАРТС ===================== -->
+  <section id="screen-darts" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_дартс.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Дартс</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="dartsBalance">0</span></button>
+    </header>
+    <div class="screen-body">
+      <div class="darts-stage" id="dartsBoard">
+        <div class="dart" id="dart">📍</div>
+      </div>
+      <div class="mines-row" style="margin-top:16px">
+        <label>Ставка</label>
+        <input id="dartsBet" class="code-input" type="number" inputmode="numeric" value="10" min="1" />
+      </div>
+      <button class="solid-btn purple" id="dartsThrow">Бросить дротик</button>
+      <p class="cells-note">В яблочко — x8, ближе к центру — x2.5, дальше — меньше. Попасть в центр трудно, но можно.</p>
+    </div>
+  </section>
+
+  <!-- ===================== АПГРЕЙДЕР ===================== -->
+  <section id="screen-upgrade" class="screen">
+    <div class="screen-bg dim up-bg" style="background-image:url('assets/фон_игры_колесо.jpg')"></div>
+    <header class="up-top">
+      <button class="back-btn up-back" data-go="menu">←</button>
+      <span class="up-logo">Glow<span>Up</span></span>
+      <div class="up-top-right">
+        <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="upBalance">0</span></button>
+      </div>
+    </header>
+    <div class="up-scroll">
+      <div class="up-ring" id="upRing">
+        <svg class="up-ring-svg" viewBox="0 0 200 200" aria-hidden="true">
+          <circle class="up-ring-ticks" cx="100" cy="100" r="92"></circle>
+          <circle class="up-ring-track" cx="100" cy="100" r="82"></circle>
+          <circle class="up-ring-arc" id="upRingArc" cx="100" cy="100" r="82"></circle>
+        </svg>
+        <button class="up-plus" id="upPlus" type="button">+</button>
+        <div class="up-ring-center">
+          <div class="up-pct" id="upChancePct">0 %</div>
+          <div class="up-pct-sub">шанс</div>
+          <img id="upNftImg" class="up-nft-img" alt="">
+        </div>
+        <div class="up-needle" id="upNeedle"></div>
+        <div class="up-hint" id="upHint" style="display:none">Выберите цель</div>
+      </div>
+
+      <div class="up-chance-line">Шанс улучшения <b id="upChance">0 %</b></div>
+
+      <div class="up-pair-row">
+        <button class="up-pair" id="upPickSrc">
+          <span class="up-pair-lbl">Ваш подарок</span>
+          <span class="up-pair-val" id="upSrcVal">Ставка 50 ⭐</span>
+        </button>
+        <span class="up-pair-arrow">→</span>
+        <button class="up-pair" id="upPickTgt">
+          <span class="up-pair-lbl">Хочу получить</span>
+          <span class="up-pair-val" id="upTgtVal">100 ⭐ · ×2</span>
+        </button>
+      </div>
+
+      <div class="up-chips" id="upChips">
+        <button class="up-chip" data-mult="1.5">×1.5</button>
+        <button class="up-chip active" data-mult="2">×2</button>
+        <button class="up-chip" data-mult="3">×3</button>
+        <button class="up-chip" data-mult="5">×5</button>
+        <button class="up-chip" data-mult="10">×10</button>
+      </div>
+
+      <div class="up-amount-row">
+        <span class="up-mult-pill">Ставка</span>
+        <span class="up-mult-pill up-bal-pill"><span class="bal-icon"></span><b id="upAmountVal">50</b></span>
+        <input class="up-slider" id="upSlider" type="range" min="1" max="1000" value="50" />
+      </div>
+
+      <div class="up-summary" id="upSummary">Ставка 50 ⭐ → 100 ⭐</div>
+
+      <button class="up-go" id="upGo" type="button">
+        <span class="up-go-main">Улучшить</span>
+        <span class="up-go-sub" id="upGoSub">шанс 48.0 %</span>
+      </button>
+    </div>
+
+    <div class="up-pick-modal" id="upBetModal">
+      <div class="up-pick-sheet">
+        <div class="up-pick-head"><b>Ваша ставка</b><button class="modal-close" id="upBetClose">×</button></div>
+        <div class="up-nft-pick" id="upBetNftWrap" style="display:none">
+          <button class="up-opt" id="upBetNft">
+            <img id="upBetNftImg" alt="">
+            <span id="upBetNftName">НФТ</span>
+            <span class="o-val" id="upBetNftPrice"></span>
+          </button>
+        </div>
+        <input id="upBetInput" class="code-input" type="number" inputmode="numeric" min="1" value="50" />
+        <div class="up-presets" id="upBetPresets">
+          <button data-bet="10">10</button>
+          <button data-bet="50">50</button>
+          <button data-bet="100">100</button>
+          <button data-bet="500">500</button>
+        </div>
+        <button class="up-go" id="upBetOk" type="button"><span class="up-go-main">Поставить</span></button>
+      </div>
+    </div>
+
+    <div class="up-pick-modal" id="upTgtModal">
+      <div class="up-pick-sheet">
+        <div class="up-pick-head"><b>Хочу получить</b><button class="modal-close" id="upTgtClose">×</button></div>
+        <div class="up-pick-grid" id="upTgtGrid"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== ПОДАРОК ===================== -->
+  <section id="screen-gift" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_меню.png')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Ежедневный подарок</h2>
+    </header>
+    <div class="screen-body gift-body">
+      <div class="gift-hero" id="giftHero">🎁</div>
+      <h3 class="gift-title">3 ключа раз в 24 часа</h3>
+      <p class="gift-desc">Каждый день тебе доступно 3 бесплатных ключа для игры «Ячейки». Ключи не копятся: если не забрать — подарок просто ждёт тебя, пока ты не заберёшь.</p>
+      <div class="gift-keys">🔑 🔑 🔑</div>
+      <button class="solid-btn" id="giftClaimBtn">Забрать 3 ключа</button>
+      <p class="gift-timer" id="giftTimer"></p>
+    </div>
+  </section>
+
+  <!-- ===================== ДОНАТ ===================== -->
+  <section id="screen-donate" class="screen">
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Донат</h2>
+    </header>
+    <div class="screen-body">
+      <div class="reward-card">
+        <p class="reward-desc">Пополнить баланс через бота @gLOWOPPBOT. Минимум 5 ⭐.</p>
+        <div class="donate-presets" id="donatePresets">
+          <button data-donate="5">5 ⭐</button>
+          <button data-donate="10">10 ⭐</button>
+          <button data-donate="50">50 ⭐</button>
+          <button data-donate="100">100 ⭐</button>
+          <button data-donate="500">500 ⭐</button>
+        </div>
+        <button class="solid-btn" id="donateGoBtn">Перейти в бота</button>
+        <p class="reward-hint">Звёзды зачисляются ботом после оплаты.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================== КАК ИГРАТЬ ===================== -->
+  <section id="screen-howto" class="screen">
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Как играть</h2>
+    </header>
+    <div class="screen-body">
+      <div class="howto-card">
+        <h3>Магазин событий</h3>
+        <p>Покупай 3D-модели за звёзды. Купленная модель встаёт рядом с ником в 3D. «Посмотреть 3D» — покрути на стенде.</p>
+        <h3>Мины</h3>
+        <p>Ставь звёзды, выбирай 1/3/5 мин и открывай клетки. Чем больше откроешь — тем выше множитель. Подорвёшься — проиграешь ставку.</p>
+        <h3>Ячейки</h3>
+        <p>Открывай ячейки ключами. Внутри ключи, звёзды и джекпоты 300–500 ⭐. Ячейки обновляются каждый день в 14:00.</p>
+        <h3>Кейсы</h3>
+        <p>Три кейса за 100, 500 и 1000 звёзд. Внутри всегда есть приз — звёзды или ключи. Окупиться трудно, но джекпот возможен.</p>
+        <h3>Колесо удачи</h3>
+        <p>Крути колесо со ставкой. Множитель от x0.1 до x3 — чаще выпадает меньше ставки, но иногда везёт.</p>
+        <h3>Напёрстки</h3>
+        <p>Запомни, под каким стаканом шарик, и угадай после перемешивания. Угадал — x2.6 к ставке.</p>
+        <h3>Подарок</h3>
+        <p>Зелёная иконка слева сверху в меню — ежедневные 3 ключа раз в 24 часа.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- ===================== МОДАЛКА НФТ ===================== -->
+<div id="nftModal" class="modal">
+  <div class="modal-sheet">
+    <div class="modal-media" id="modalMedia"></div>
+    <div class="modal-info">
+      <h3 id="modalTitle">НФТ</h3>
+      <p class="modal-price" id="modalPrice"></p>
+      <div class="modal-actions" id="modalActions"></div>
+    </div>
+    <button class="modal-close" id="modalClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== ПРОСМОТР 3D ===================== -->
+<div id="viewerModal" class="modal">
+  <div class="viewer-sheet">
+    <div class="viewer-stage" id="viewerStage">
+      <div class="viewer-loading" id="viewerLoading"><span class="spin"></span>Загрузка 3D модели…</div>
+    </div>
+    <div class="viewer-info">
+      <h3 id="viewerTitle">—</h3>
+      <p class="viewer-tip">Тяни, чтобы вертеть. Двойной клик — приблизить.</p>
+    </div>
+    <button class="modal-close" id="viewerClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== МАГАЗИН КЛЮЧЕЙ ===================== -->
+<div id="keyShopModal" class="modal">
+  <div class="modal-sheet">
+    <div class="modal-info center">
+      <div class="key-hero">🔑</div>
+      <h3>Магазин ключей</h3>
+      <p class="reward-desc">Ключ открывает одну ячейку в игре «Ячейки».</p>
+      <p class="reward-hint">Цена: <b>100 звёзд</b> за ключ. Баланс: <b id="keyShopBalance">0</b> ⭐</p>
+      <div class="key-pack-row">
+        <button class="key-pack" data-pack="1"><b>1</b><span>100 ⭐</span></button>
+        <button class="key-pack" data-pack="5"><b>5</b><span>500 ⭐</span></button>
+        <button class="key-pack" data-pack="10"><b>10</b><span>1000 ⭐</span></button>
+      </div>
+    </div>
+    <button class="modal-close" id="keyShopClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== КЕЙС: ПРОКРУТКА ===================== -->
+<div id="caseModal" class="modal">
+  <div class="case-stage">
+    <div class="case-reel-wrap">
+      <div class="case-pointer"></div>
+      <div class="case-reel" id="caseReel"></div>
+    </div>
+    <div class="case-result" id="caseResult"></div>
+    <button class="prize-continue" id="caseClaim">Забрать</button>
+  </div>
+</div>
+
+<!-- ===================== ПРИЗ ===================== -->
+<div id="prizeModal" class="modal">
+  <div class="prize-stage">
+    <div class="prize-burst"></div>
+    <div class="prize-item" id="prizeItem">⭐</div>
+    <div class="prize-text" id="prizeText">+30 звёзд</div>
+  </div>
+  <button class="prize-continue" id="prizeContinue">Продолжить</button>
+</div>
+
+<!-- ===================== ВВОД ЦЕНЫ ===================== -->
+<div id="priceModal" class="modal">
+  <div class="modal-sheet">
+    <div class="modal-info center">
+      <h3>Продажа</h3>
+      <p class="reward-desc">Рынок ещё в разработке. Запишем цену для будущей продажи.</p>
+      <input id="priceInput" class="code-input" type="number" inputmode="numeric" value="400" min="1" />
+      <div class="modal-actions">
+        <button class="action-btn buy" id="priceOkBtn">Продать</button>
+        <button class="action-btn dark" id="priceCancelBtn">Отмена</button>
+      </div>
+    </div>
+    <button class="modal-close" id="priceClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== ПРОФИЛЬ ===================== -->
+<div id="profileModal" class="modal">
+  <div class="modal-sheet">
+    <div class="profile-head">
+      <div class="profile-avatar" id="profAvatar"><span id="profAvatarPh">И</span></div>
+      <h3 id="profName">Игрок</h3>
+      <p class="profile-handle" id="profHandle">@player</p>
+    </div>
+    <div class="profile-stats">
+      <div class="stat"><b id="statLevel">1</b><span>Уровень</span></div>
+      <div class="stat"><b id="statHours">0ч</b><span>В игре</span></div>
+      <div class="stat"><b id="statGames">0</b><span>Игр</span></div>
+      <div class="stat"><b id="statStars">0</b><span>Звёзд</span></div>
+      <div class="stat"><b id="statKeys">0</b><span>Ключей</span></div>
+      <div class="stat"><b id="statXp">0/150</b><span>До уровня</span></div>
+    </div>
+    <button class="admin-medal" id="adminMedal" style="display:none">🏅 Админ-баланс</button>
+    <button class="modal-close" id="profileClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== КАРТА ===================== -->
+<div id="mapModal" class="modal">
+  <div class="map-sheet">
+    <img id="mapImg" src="assets/карта_игры.png" alt="Карта" />
+    <button class="map-mark m1" id="mapMark1">1</button>
+    <button class="map-mark m2 locked" id="mapMark2">2</button>
+    <button class="modal-close" id="mapClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== АДМИН ===================== -->
+<div id="adminModal" class="modal">
+  <div class="modal-sheet">
+    <div class="modal-info center">
+      <h3>Админ-панель</h3>
+      <p class="reward-desc">Выдать звёзды на баланс. Только для админа.</p>
+      <div class="admin-quick">
+        <button class="action-btn buy" data-grant="100">+100</button>
+        <button class="action-btn buy" data-grant="1000">+1000</button>
+        <button class="action-btn buy" data-grant="10000">+10 000</button>
+      </div>
+      <input id="adminAmount" class="code-input" type="number" inputmode="numeric" min="1" value="1000" />
+      <div class="modal-actions"><button class="action-btn buy" id="adminGrantBtn">Выдать</button></div>
+    </div>
+    <button class="modal-close" id="adminClose">×</button>
+  </div>
+</div>
+
+<!-- ===================== ПЕРЕХОД ЛОКАЦИИ ===================== -->
+<div id="locTransition"><div class="loc-portal"></div></div>
+
+<!-- ===================== ТОСТЫ ===================== -->
+<div id="toasts"></div>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+
+<script src="app13.js?v=1"></script>
+</body>
+</html>
