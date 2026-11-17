@@ -131,11 +131,10 @@
         <span class="card-ico card-emoji">⬆️</span>
         <span class="card-title">Апгрейдер</span>
       </button>
-      <button class="nav-card nav-market" style="--bg:url('assets/фон_игры_рынок.jpg')">
+      <button class="nav-card nav-market" data-goto="market" style="--bg:url('assets/фон_игры_рынок.jpg')">
         <span class="card-shade"></span>
         <span class="card-ico ico-market"></span>
         <span class="card-title">Рынок</span>
-        <span class="card-soon">Скоро</span>
       </button>
     </nav>
 
@@ -169,6 +168,20 @@
     <div class="screen-body">
       <p class="cells-note">Все твои НФТ. Проигранная в апгрейдере НФТ уходит из коллекции, но остаётся в «Магазине событий».</p>
       <div class="card-grid" id="myNftGrid"></div>
+    </div>
+  </section>
+
+  <!-- ===================== РЫНОК ===================== -->
+  <section id="screen-market" class="screen">
+    <div class="screen-bg dim" style="background-image:url('assets/фон_игры_рынок.jpg')"></div>
+    <header class="subbar">
+      <button class="back-btn" data-go="menu">←</button>
+      <h2>Рынок</h2>
+      <button class="bal-btn small"><span class="bal-icon"></span><span class="bal-val" id="balValMarket">0</span></button>
+    </header>
+    <div class="screen-body">
+      <p class="cells-note">Здесь игроки продают свои НФТ. Выставь модель в профиле: «Продать на рынке». Покупка мгновенная.</p>
+      <div class="card-grid" id="marketGrid"></div>
     </div>
   </section>
 
@@ -400,6 +413,15 @@
         <span class="up-go-main">Улучшить</span>
         <span class="up-go-sub" id="upGoSub">шанс 48.0 %</span>
       </button>
+
+      <div class="up-extra-row" id="upExtraRow" style="display:none">
+        <div class="up-extra-head">
+          <span>+ звёзды с баланса к шансу</span>
+          <b id="upExtraVal">0 ⭐</b>
+        </div>
+        <input class="up-slider" id="upExtra" type="range" min="0" max="500" value="0" />
+        <p class="up-extra-hint">Каждая звезда чуть повышает шанс (до +40%). Звёзды списываются при прокруте.</p>
+      </div>
     </div>
 
     <div class="up-pick-modal" id="upBetModal">
