@@ -43,6 +43,7 @@ const MODEL_CATALOG = [
   { id:'2', name:'LerwaxiMi', rarity:'epic',      price:2500, model:'assets/LerwaxiMi.glb', image:'assets/фон_модели_LerwaxiMi.png' },
   { id:'3', name:'Sweaty',     rarity:'common',   price:900,  model:'assets/Sweaty.glb', image:'assets/фон_модели_Sweaty.png' },
   { id:'4', name:'lilgoga',    rarity:'epic',     price:1500, model:'assets/lilgoga.glb', image:'assets/фон_модели_lilgoga.png' },
+  { id:'5', name:'55',         rarity:'epic',     price:1200, model:'assets/model5.glb', image:'assets/фон_модели_55.jpg' },
 ];
 
 // ---------- Ячейки: 30, два больших приза 300-500, остальные мелкие ----------
@@ -301,6 +302,81 @@ function openAdmin(){
     : 'Действия для всех игроков включатся после подключения общей базы.';
   const m=document.getElementById('adminModal'); if(m) m.classList.add('open');
 }
+
+// ---------- Рынок (через общую базу) ----------
+function murl(){ return CLOUD_DB.url.replace(/\/+$/,'')+'/rest/v1/'; }
+async function dbUpsertPlayer(){
+  if(!dbReady() || !state.tgId) return;
+  try{
+    await fetch(murl()+'glowup_players?user_id=eq.'+state.tgId, { method:'POST', headers: dbHeaders(), body: JSON.stringify({ user_id: state.tgId, stars: state.stars, level: state.level||1, xp: state.xp||0, owned: JSON.stringify(state.owned||[]), user_nft: state.userNFT||null, loc: state.loc||1 })});
+  }catch(_){}
+}
+async function dbPullPlayer(){
+  if(!dbReady() || !state.tgId) return false;
+  try{
+    const r=await fetch(murl()+'glowup_players?user_id=eq.'+state.tgId+'&select=stars,owned,user_nft', { headers: dbHeaders() });
+    const j=await r.json();
+    const row=j&&j[0];
+    if(row){
+      let changed=false;
+      if(typeof row.stars==='number'){ const navc=row.stars - (state.stars||0); if(navc!==0){ state.stars=row.stars; changed=true; } }
+      if(row.owned) { const a=JSON.parse(row.owned||'[]'); state.owned=a; changed=true; }
+
+      return changed;
+    } return false;
+  }catch(_){ return false; }
+}
+async function fetchMarket(){ try{ const r=await fetch(murl()+'glowup_market?select=*&order=created_at.asc', {headers: dbHeaders()}); return await r.json(); }catch(_){ return []; } }
+async function renderMarket(){
+  const g=document.getElementById('marketGrid'); if(!g) return;
+  const ls=await fetchMarket();
+  g.innerHTML='';
+  if(!ls.length){ g.innerHTML='<p class="cells-note">Лотов пока нет. Выставь модель на продажу в карточке НФТ.</p>'; return; }
+  ls.forEach(l=>{
+    const m=MODEL_CATALOG.find(x=>x.id===l.model_id); if(!m) return;
+    const mine = state.tgId && l.seller_id===state.tgId;
+    const d=document.createElement('div'); d.className='item-card';
+    d.innerHTML = `<div class="item-media"><img class="poster" src="${m.image}" alt="${m.name}" style="width:100%;height:100%;object-fit:cover"/></div>
+      <div class="item-body">
+        <div class="item-name">${m.name} · №${l.id}</div>
+        <div class="item-price"><span class="ic"></span>${l.price}</div>
+        <div class="item-actions"><button class="mini-buy" data-mact="${mine?'unlist':'buy'}" data-id="${l.id}">${mine?'Снять':'Купить'}</button></div>
+      </div>`;
+    d.addEventListener('click',(e)=>{
+      const b=e.target.closest('[data-mact]'); if(!b) return; e.stopPropagation();
+      if(b.dataset.mact==='unlist') unlistMarket(b.dataset.id); else buyMarket(b.dataset.id);
+    });
+    g.appendChild(d);
+  });
+}
+function listMarket(){
+  const mm=currentModalModel; const m=model(mm); if(!m) return;
+  const d=document.getElementById('priceInput'); const price=parseInt((d?d.value:'0'),10)||0;
+  if(price<=0){ toast('Цена больше 0'); return; }
+  if(!state.tgId){ toast('Войди через Telegram'); return; }
+  (async()=>{
+    try{
+      await dbUpsertPlayer();
+      await fetch(murl()+'glowup_market', { method:'POST', headers: dbHeaders(), body: JSON.stringify({ seller_id: state.tgId, model_id: mm, price: price })});
+      closePriceModal(); renderMyNft(); renderMarket(); toast('Модель выставлена на рынок', true);
+    }catch(_){ toast('Не удалось выставить'); }
+  })();
+}
+async function unlistMarket(id){
+  try{ await fetch(murl()+'glowup_market?id=eq.'+id, { method:'DELETE', headers: dbHeaders()}); renderMarket(); toast('Лот снят', true); }catch(_){ toast('Не удалось снять'); }
+}
+async function buyMarket(id){
+  if(!state.tgId){ toast('Войди через Telegram'); return; }
+  try{
+    await dbUpsertPlayer();
+    const r=await fetch(murl()+'rpc/market_buy', { method:'POST', headers: dbHeaders(), body: JSON.stringify({ p_listing: Number(id), p_buyer: state.tgId })});
+    const j=await r.json();
+    if(j && j.ok){
+      if(typeof dbPullPlayer==='function') await dbPullPlayer();
+      save(); renderBalance(); renderMyNft(); renderMarket(); toast('Покупка успешна!', true);
+    } else { toast((j&&j.error)||'Покупка не прошла'); }
+  }catch(_){ toast('Не удалось купить'); }
+}
 function closeAdmin(){ const m=document.getElementById('adminModal'); if(m) m.classList.remove('open'); }
 
 // ---------- Донат ----------
@@ -441,6 +517,7 @@ function goto(name){
   t.classList.add('active');
   if (name==='shop') renderShop();
   if (name==='myNft') renderMyNft();
+  if (name==='market') renderMarket();
   if (name==='cells') renderCells();
   if (name==='mines') renderMines();
   if (name==='cases') renderCases();
@@ -524,8 +601,8 @@ function makeViewer(container, modelId, opts){
   const h = Math.max(container.clientHeight||120, 60);
 
   // оптимизация для мобильных: ниже pixelRatio = легче GPU (важно в Telegram)
-  const PR = opts.mini ? 1.5 : 2.0;
-  const renderer = new THREE.WebGLRenderer({ antialias:!!opts.orbit, alpha:true, preserveDrawingBuffer:true });
+  const PR = opts.mini ? 1.0 : (opts.orbit ? 1.75 : 1.5);
+  const renderer = new THREE.WebGLRenderer({ antialias:!!opts.orbit, alpha:true, preserveDrawingBuffer:!!opts.orbit });
   renderer.setPixelRatio(Math.max(1, Math.min(window.devicePixelRatio||1, PR)));
   renderer.setClearColor(0x000000, 0);
   // корректный цвет и мягкий тонмаппинг — модели выглядят чище, без «грязи»
@@ -824,6 +901,9 @@ function openModal(modelId){
     el.modalActions.appendChild(use);
     const sell=document.createElement('button'); sell.className='action-btn purple'; sell.textContent='Продать игре';
     sell.addEventListener('click',()=>sellToGame(modelId)); el.modalActions.appendChild(sell);
+    const mk=document.createElement('button'); mk.className='action-btn dark'; mk.textContent='Выставить на рынок';
+    mk.addEventListener('click',()=>{ el.priceInput.value=Math.round(m.price*0.8); el.priceModal.classList.add('open'); el.priceInput._model=modelId; });
+    el.modalActions.appendChild(mk);
   }
   const v3d=document.createElement('button'); v3d.className='action-btn dark'; v3d.textContent='Посмотреть 3D';
   v3d.addEventListener('click',()=>openViewer(modelId)); el.modalActions.appendChild(v3d);
@@ -846,9 +926,7 @@ function sellToGame(modelId){
   save(); renderBalance(); renderShop(); renderNFT(); renderMyNft(); closeModal();
   toast('Продано игре за '+low+' ⭐');
 }
-/* =====================================================================
-   ЯЧЕЙКИ
-   ===================================================================== */
+function closePriceModal(){ el.priceModal.classList.remove('open'); el.priceInput._model=null; }
 let cellResetTimer=null;
 function computeNextReset(){
   const now=new Date();
@@ -1596,19 +1674,24 @@ function seedGifts(){
     state.giftStarter = true; save();
   }
 }
-let upBet=50, upMult=2, upBusy=false, upSrc='stars', upNftTarget=null;
+let upBet=50, upMult=2, upBusy=false, upSrc='stars', upNftTarget=null, upExtra=0;
 const UP_MULTS=[1.5,2,2.5,3,4,5,6,7,8,9,10];
-const UP_CHANCE={1.5:.50,2:.50,2.5:.40,3:.33,4:.25,5:.20,6:.17,7:.14,8:.13,9:.11,10:.10};
+const UP_CHANCE={1.5:.647,2:.48,2.5:.38,3:.313,4:.23,5:.18,6:.147,7:.123,8:.105,9:.091,10:.08};
 const UP_RING_C=2*Math.PI*82;
 function upNft(){ return state.userNFT? MODEL_CATALOG.find(m=>m.id===state.userNFT):null; }
 function upChanceVal(){
   if(upSrc==='nft'){
     const from=upNft();
     if(!from||!upNftTarget) return 0;
-    if(upNftTarget.kind==='balance') return Math.min(.97,.30*chanceBoost());
-    const to=MODEL_CATALOG.find(m=>m.id===upNftTarget.id);
-    if(!to||to.price<=from.price) return 0;
-    return Math.min(.97, from.price/to.price*.55*chanceBoost());
+    let base;
+    if(upNftTarget.kind==='balance') base = .30*chanceBoost();
+    else {
+      const to=MODEL_CATALOG.find(m=>m.id===upNftTarget.id);
+      if(!to||to.price<=from.price) return 0;
+      base = from.price/to.price*.55*chanceBoost();
+    }
+    const bonus = Math.min(.40, (upExtra||0)*0.002*chanceBoost());
+    return Math.min(.97, base + bonus);
   }
   return Math.min(.97,(UP_CHANCE[upMult]||.03)*chanceBoost());
 }
@@ -1798,11 +1881,15 @@ function renderUpgrade(){
     } else { if(tv) tv.textContent='Выбрать цель'; }
     if(amtRow) amtRow.style.display='none';
     if(chips) chips.style.display='none';
+    const exRow=document.getElementById('upExtraRow'); if(exRow) exRow.style.display='block';
+    const exSl=document.getElementById('upExtra'); if(exSl){ exSl.max=Math.max(0,state.stars); exSl.value=Math.min(upExtra,exSl.max); }
+    const exVal=document.getElementById('upExtraVal'); if(exVal) exVal.textContent=upExtra+' ⭐';
   } else {
     if(sv) sv.textContent='Ставка '+upBet+' ⭐';
     if(tv) tv.textContent=target+' ⭐ · ×'+upMult;
     if(amtRow) amtRow.style.display='flex';
     if(chips) chips.style.display='flex';
+    const exRow=document.getElementById('upExtraRow'); if(exRow) exRow.style.display='none';
     document.querySelectorAll('.up-chip').forEach(b=>b.classList.toggle('active', parseFloat(b.dataset.mult)===upMult));
     const av=document.getElementById('upAmountVal'); if(av) av.textContent=upBet;
     const sl=document.getElementById('upSlider'); if(sl){ sl.max=Math.max(1,state.stars); sl.value=Math.min(upBet,sl.max); }
@@ -1827,6 +1914,7 @@ function doUpgrade(){
   const chDeg=ch*360, target=upTargetVal();
   upBusy=true;
   if(!nft){ state.stars-=upBet; save(); renderBalance(); }
+  if(nft && upExtra>0){ const ex=Math.min(upExtra, Math.max(0,state.stars)); state.stars-=ex; save(); renderBalance(); }
   const win=Math.random()<ch;
   let deg;
   if(win){ deg=4+Math.random()*Math.max(1,chDeg-8); }
@@ -1859,7 +1947,7 @@ function doUpgrade(){
       if(win){ state.stars+=target; if(typeof addXp==='function') addXp(target); save(); renderBalance(); toast('Победа! +'+target+' ⭐', true); }
       else { toast('Проигрыш. Ставка сгорела'); }
     }
-    upBusy=false; renderUpgrade();
+    upBusy=false; upExtra=0; renderUpgrade();
   }, 5000);
 }
 
@@ -1968,8 +2056,16 @@ if(upTgtModalEl) upTgtModalEl.addEventListener('click',e=>{ if(e.target===upTgtM
 document.querySelectorAll('.up-chip').forEach(b=>b.addEventListener('click',()=>{ const m=parseFloat(b.dataset.mult); if(m) upMult=m; renderUpgrade(); }));
 const upSl=document.getElementById('upSlider');
 if(upSl) upSl.addEventListener('input',()=>{ upBet=Math.max(1,parseInt(upSl.value,10)||1); if(state.stars>0 && upBet>state.stars) upBet=state.stars; renderUpgrade(); });
+const upEx=document.getElementById('upExtra');
+if(upEx) upEx.addEventListener('input',()=>{ upExtra=Math.max(0,parseInt(upEx.value,10)||0); renderUpgrade(); });
 const upGoBtn=document.getElementById('upGo');
 if(upGoBtn) upGoBtn.addEventListener('click',doUpgrade);
+
+// рынок: модалка выставления цены
+if(el.priceOkBtn) el.priceOkBtn.addEventListener('click',()=>{ el.priceInput._model = currentModalModel || el.priceInput._model; listMarket(); });
+if(el.priceCancelBtn) el.priceCancelBtn.addEventListener('click',closePriceModal);
+if(el.priceClose) el.priceClose.addEventListener('click',closePriceModal);
+if(el.priceModal) el.priceModal.addEventListener('click',e=>{ if(e.target===el.priceModal) closePriceModal(); });
 
 // ячейки: кнопки
 el.openOneBtn && el.openOneBtn.addEventListener('click',()=>{
@@ -2020,7 +2116,8 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
   renderShop();
   updateMyNftCount();
   syncGlobalControl();
-  setInterval(syncGlobalControl, 60000);
+  setInterval(syncGlobalControl, 8000);
+  document.addEventListener('visibilitychange',()=>{ if(!document.hidden) syncGlobalControl(); });
   renderMines();
   setTimeout(hideLoad, 350);
   // ежесекундное обновление подарка (иконка в меню + таймер на экране)
