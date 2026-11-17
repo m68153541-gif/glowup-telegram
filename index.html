@@ -18,7 +18,7 @@
   }
 }
 </script>
-<link rel="stylesheet" href="style12.css?v=1" />
+<link rel="stylesheet" href="style13.css?v=1" />
 </head>
 <body>
 <div id="loadingScreen">
@@ -624,6 +624,13 @@
       </div>
       <input id="adminAmount" class="code-input" type="number" inputmode="numeric" min="1" value="1000" />
       <div class="modal-actions"><button class="action-btn buy" id="adminGrantBtn">Выдать</button></div>
+      <div class="admin-global">
+        <p class="admin-hint" id="adminGlobalHint">Действия ниже применяются ко всем игрокам.</p>
+        <div class="modal-actions">
+          <button class="action-btn purple" id="adminAddAllBtn">Добавить баланс всем</button>
+          <button class="action-btn" id="adminResetAllBtn" style="background:#d94a4a;color:#fff">Обнулить балансы всем</button>
+        </div>
+      </div>
     </div>
     <button class="modal-close" id="adminClose">×</button>
   </div>
@@ -638,6 +645,6 @@
 <div class="orb orb-1"></div>
 <div class="orb orb-2"></div>
 
-<script src="app13.js?v=1"></script>
+<script src="app14.js?v=1"></script>
 </body>
 </html>

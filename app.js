@@ -247,8 +247,58 @@ function grantStars(v){
   state.stars += v; save(); renderBalance();
   toast('+'+v+' ⭐ зачислено', true);
 }
+// ---------- Глобальные действия админа (работают через общую базу) ----------
+const CLOUD_DB = { url:'', key:'' };
+function dbReady(){ return !!(CLOUD_DB.url && CLOUD_DB.key); }
+function dbHeaders(){
+  return {
+    'apikey': CLOUD_DB.key,
+    'Authorization': 'Bearer '+CLOUD_DB.key,
+    'Content-Type': 'application/json'
+  };
+}
+function controlUrl(){ return CLOUD_DB.url.replace(/\/+$/,'')+'/rest/v1/glowup_control?id=eq.1'; }
+async function readControl(){
+  const r = await fetch(controlUrl(), { headers: dbHeaders() });
+  const j = await r.json();
+  return (j && j[0]) || {};
+}
+async function adminResetAll(){
+  if(!isAdmin) return;
+  if(!dbReady()){ toast('Без общей базы чужие балансы недоступны — подключи Supabase'); return; }
+  try{
+    const row = await readControl();
+    await fetch(controlUrl(), { method:'PATCH', headers: dbHeaders(), body: JSON.stringify({ reset_epoch: (row.reset_epoch||0)+1 }) });
+    toast('Балансы всех игроков обнулены', true);
+  }catch(_){ toast('Не удалось обнулить: проверь базу'); }
+}
+async function adminAddAll(v){
+  if(!isAdmin) return;
+  v = parseInt(v,10)||0;
+  if(v<=0){ toast('Введите сумму'); return; }
+  if(!dbReady()){ toast('Без общей базы начислить всем нельзя — подключи Supabase'); return; }
+  try{
+    const row = await readControl();
+    await fetch(controlUrl(), { method:'PATCH', headers: dbHeaders(), body: JSON.stringify({ grant_epoch: (row.grant_epoch||0)+1, grant_amount: v }) });
+    toast('+'+v+' ⭐ начислено всем игрокам', true);
+  }catch(_){ toast('Не удалось начислить: проверь базу'); }
+}
+async function syncGlobalControl(){
+  if(!dbReady()) return;
+  try{
+    const row = await readControl();
+    let changed=false;
+    if((row.reset_epoch||0) > (state.resetEpoch||0)){ state.stars=0; state.resetEpoch=row.reset_epoch; changed=true; }
+    if((row.grant_epoch||0) > (state.grantEpoch||0)){ state.stars += (row.grant_amount||0); state.grantEpoch=row.grant_epoch; changed=true; }
+    if(changed){ save(); renderBalance(); }
+  }catch(_){}
+}
 function openAdmin(){
   if(!isAdmin){ return; }
+  const hint=document.getElementById('adminGlobalHint');
+  if(hint) hint.textContent = dbReady()
+    ? 'Действия ниже применяются ко всем игрокам.'
+    : 'Действия для всех игроков включатся после подключения общей базы.';
   const m=document.getElementById('adminModal'); if(m) m.classList.add('open');
 }
 function closeAdmin(){ const m=document.getElementById('adminModal'); if(m) m.classList.remove('open'); }
@@ -774,18 +824,6 @@ function openModal(modelId){
     el.modalActions.appendChild(use);
     const sell=document.createElement('button'); sell.className='action-btn purple'; sell.textContent='Продать игре';
     sell.addEventListener('click',()=>sellToGame(modelId)); el.modalActions.appendChild(sell);
-    // на рынок только через 24ч после покупки
-    const lock = state.marketLock[modelId] || 0;
-    const now = Date.now();
-    const canMarket = !lock || (now >= lock);
-    const mk=document.createElement('button'); mk.className='action-btn dark';
-    if(canMarket){ mk.textContent='Выставить на рынок'; mk.addEventListener('click',()=>sellToMarket(modelId)); }
-    else {
-      const hrs = Math.ceil((lock-now)/3600000);
-      mk.textContent='Рынок откроется через '+hrs+' ч';
-      mk.disabled=true;
-    }
-    el.modalActions.appendChild(mk);
   }
   const v3d=document.createElement('button'); v3d.className='action-btn dark'; v3d.textContent='Посмотреть 3D';
   v3d.addEventListener('click',()=>openViewer(modelId)); el.modalActions.appendChild(v3d);
@@ -808,30 +846,6 @@ function sellToGame(modelId){
   save(); renderBalance(); renderShop(); renderNFT(); renderMyNft(); closeModal();
   toast('Продано игре за '+low+' ⭐');
 }
-function sellToMarket(modelId){
-  const m=model(modelId); if(!m) return;
-  const idx=(state.owned||[]).lastIndexOf(modelId);
-  if(idx<0) return;
-  el.priceInput.value = Math.round(m.price*0.8);
-  el.priceModal.classList.add('open');
-  el.priceInput._model=modelId;
-}
-function confirmSellToMarket(){
-  const modelId = el.priceInput._model;
-  const m=model(modelId); if(!m){ closePriceModal(); return; }
-  const idx=(state.owned||[]).lastIndexOf(modelId);
-  if(idx<0){ closePriceModal(); return; }
-  const p = parseInt(el.priceInput.value,10);
-  if(isNaN(p)||p<=0){ toast('Цена должна быть больше 0'); return; }
-  state.owned.splice(idx,1);
-  // пока рынка нет — просто возвращаем половину и помечаем
-  state.stars += Math.round(p*0.5);
-  if(state.userNFT===modelId) state.userNFT=null;
-  save(); renderBalance(); renderShop(); renderNFT(); renderMyNft(); closeModal(); closePriceModal();
-  toast('Модель продана. Рынок появится позже.');
-}
-function closePriceModal(){ el.priceModal.classList.remove('open'); el.priceInput._model=null; }
-
 /* =====================================================================
    ЯЧЕЙКИ
    ===================================================================== */
@@ -1873,6 +1887,8 @@ el.viewerModal.addEventListener('click',e=>{ if(e.target===el.viewerModal) close
 document.querySelectorAll('#donatePresets button').forEach(b=>b.addEventListener('click',()=>donateDeep(b.dataset.donate)));
 const donateGo=document.getElementById('donateGoBtn'); if(donateGo) donateGo.addEventListener('click',()=>donateDeep(50));
 const adminMedal=document.getElementById('adminMedal'); if(adminMedal) adminMedal.addEventListener('click',openAdmin);
+const adminAddAllBtn=document.getElementById('adminAddAllBtn'); if(adminAddAllBtn) adminAddAllBtn.addEventListener('click',()=>{ const i=document.getElementById('adminAmount'); adminAddAll(i?i.value:0); });
+const adminResetAllBtn=document.getElementById('adminResetAllBtn'); if(adminResetAllBtn) adminResetAllBtn.addEventListener('click',()=>{ adminResetAll(); });
 const adminClose=document.getElementById('adminClose'); if(adminClose) adminClose.addEventListener('click',closeAdmin);
 const adminModalEl=document.getElementById('adminModal'); if(adminModalEl) adminModalEl.addEventListener('click',e=>{ if(e.target===adminModalEl) closeAdmin(); });
 document.querySelectorAll('#adminModal [data-grant]').forEach(b=>b.addEventListener('click',()=>grantStars(b.dataset.grant)));
@@ -1883,10 +1899,6 @@ const locBack=document.getElementById('locBackBtn'); if(locBack) locBack.addEven
 el.keyShopClose.addEventListener('click',closeKeyShop);
 el.keyShopModal.addEventListener('click',e=>{ if(e.target===el.keyShopModal) closeKeyShop(); });
 el.keyShopModal.querySelectorAll('.key-pack').forEach(b=>{ b.addEventListener('click',()=>buyKeys(parseInt(b.dataset.pack,10))); });
-el.priceOkBtn.addEventListener('click',confirmSellToMarket);
-el.priceCancelBtn.addEventListener('click',closePriceModal);
-el.priceClose.addEventListener('click',closePriceModal);
-el.priceModal.addEventListener('click',e=>{ if(e.target===el.priceModal) closePriceModal(); });
 el.prizeContinue.addEventListener('click',closePrize);
 
 // подарок
@@ -2007,6 +2019,7 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
   renderNFT();
   renderShop();
   updateMyNftCount();
+  syncGlobalControl();
   renderMines();
   setTimeout(hideLoad, 350);
   // ежесекундное обновление подарка (иконка в меню + таймер на экране)

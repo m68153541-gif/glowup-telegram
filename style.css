@@ -999,3 +999,7 @@ body.loc2 .screen.active{ background:radial-gradient(120% 80% at 50% 0%, #1b2a4a
 .nav-card{ position:relative; }
 .nav-count{ position:absolute; top:8px; right:8px; min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:linear-gradient(180deg,#ffd877,#e0a52e); color:#1a1206; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,.35); }
 .nav-count[hidden]{ display:none; }
+
+/* ===== админ: глобальные действия ===== */
+.admin-global{ margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,.12); }
+.admin-hint{ font-size:12px; opacity:.72; margin:0 0 8px; text-align:center; line-height:1.35; }
