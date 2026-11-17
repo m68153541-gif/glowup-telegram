@@ -17,7 +17,7 @@ from aiogram.types import (
 )
 
 TOKEN = os.getenv("BOT_TOKEN", "")
-WEBAPP_URL = os.getenv("WEBAPP_URL", "https://glowup-telegram.onrender.com/index.html")
+WEBAPP_URL = os.getenv("WEBAPP_URL", "https://glowup-telegram.onrender.com/game.html")
 ADMIN_ID = int(os.getenv("ADMIN_ID", "8513244807"))
 MIN_DONATE = 5
 DB_PATH = os.getenv("DB_PATH", "glowup_bot.sqlite3")
