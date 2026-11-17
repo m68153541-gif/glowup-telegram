@@ -994,3 +994,8 @@ body.loc2 #menuBg{ background-image:url('assets/фон_меню.png') !important
 body.loc2{ background:#0b1220; }
 body.loc2 .screen.active{ background:radial-gradient(120% 80% at 50% 0%, #1b2a4a, #0a1120 60%); }
 .menu-grid.loc2-order .nav-card{ border-color:rgba(246,196,83,.35); }
+
+/* ===== счётчик на карточке «Мои модели» ===== */
+.nav-card{ position:relative; }
+.nav-count{ position:absolute; top:8px; right:8px; min-width:22px; height:22px; padding:0 6px; border-radius:11px; background:linear-gradient(180deg,#ffd877,#e0a52e); color:#1a1206; font-size:12px; font-weight:900; display:flex; align-items:center; justify-content:center; box-shadow:0 4px 12px rgba(0,0,0,.35); }
+.nav-count[hidden]{ display:none; }

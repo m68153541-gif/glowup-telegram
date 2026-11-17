@@ -696,7 +696,14 @@ function renderShop(){
 }
 
 /* ---------- Мои НФТ ---------- */
+function updateMyNftCount(){
+  const b=document.getElementById('myNftCount'); if(!b) return;
+  const n=(state.owned||[]).length;
+  b.textContent=n;
+  b.hidden = n===0;
+}
 function renderMyNft(){
+  updateMyNftCount();
   const grid=document.getElementById('myNftGrid'); if(!grid) return;
   grid.innerHTML='';
   const ids=(state.owned||[]).slice();
@@ -1999,6 +2006,7 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
   await threeReady();
   renderNFT();
   renderShop();
+  updateMyNftCount();
   renderMines();
   setTimeout(hideLoad, 350);
   // ежесекундное обновление подарка (иконка в меню + таймер на экране)
