@@ -41,8 +41,8 @@ const DEFAULT_STATE = {
 const MODEL_CATALOG = [
   { id:'1', name:'DianaLovis', rarity:'legendary', price:1000, model:'assets/DianaLovis.glb', image:'assets/фон_модели_DianaLovis.png' },
   { id:'2', name:'LerwaxiMi', rarity:'epic',      price:2500, model:'assets/LerwaxiMi.glb', image:'assets/фон_модели_LerwaxiMi.png' },
-  { id:'3', name:'Sweaty',     rarity:'common',   price:900,  model:'assets/Sweaty.glb', image:'assets/фон_модели_Sweaty.png', soon:true },
-  { id:'4', name:'lilgoga',    rarity:'epic',     price:1500, model:'assets/lilgoga.glb', image:'assets/фон_модели_lilgoga.png' },
+  { id:'3', name:'Sweaty',     rarity:'common',   price:900,  model:'assets/Sweaty.glb', image:'assets/фон_модели_Sweaty.png' },
+  { id:'4', name:'lilgoga',    rarity:'epic',     price:1500, model:'assets/lilgoga2.glb', image:'assets/фон_модели_lilgoga.png' },
   { id:'5', name:'55',         rarity:'epic',     price:1200, model:'assets/model5.glb', image:'assets/фон_модели_55.jpg' },
 ];
 
@@ -1369,42 +1369,44 @@ function renderCups(){
   cupsState.active=false; cupsState.busy=false; cupsState.cupPos=[0,1,2];
   if(el.cupsHint) el.cupsHint.textContent='Нажми «Играть», запомни стакан с шариком и угадай после перемешивания.';
 }
-function startCups(){
+function cupEls(){ return [...el.cupsRow.querySelectorAll('.cup')]; }
+function wait(ms){ return new Promise(r=>setTimeout(r,ms)); }
+async function startCups(){
   if(cupsState.busy) return;
   const bet=parseInt(el.cupsBet.value,10);
   if(isNaN(bet)||bet<1){ toast('Ставка от 1 звезды'); return; }
   if(bet>state.stars){ toast('Недостаточно звёзд'); return; }
   state.stars-=bet; countGame(); save(); renderBalance();
+  const cups=cupEls();
   cupsState={ active:true, busy:true, ballCup:Math.floor(Math.random()*3), bet, cupPos:[0,1,2] };
-  const cups=[...el.cupsRow.querySelectorAll('.cup')];
-  cups.forEach((c,i)=>{ c.style.left=(i*(100/3))+'%'; c.classList.remove('peek','reveal','hit'); c.disabled=true; });
-  if(el.cupsHint) el.cupsHint.textContent='Запоминай, где шарик…';
+  cups.forEach((c,i)=>{ c.style.left=(i*(100/3))+'%'; c.className='cup'; c.disabled=true; });
+  if(el.cupsHint) el.cupsHint.textContent='Шарик под этим стаканом…';
   cups[cupsState.ballCup].classList.add('peek');
-  setTimeout(()=>{
-    cups.forEach(c=>c.classList.remove('peek'));
-    shuffleCups(cups).then(()=>{
-      cupsState.busy=false;
-      cups.forEach(c=>c.disabled=false);
-      if(el.cupsHint) el.cupsHint.textContent='Где шарик? Нажми на стакан!';
-    });
-  }, 800);
+  await wait(950);
+  cups.forEach(c=>c.classList.remove('peek'));
+  cups.forEach(c=>c.classList.add('closed'));
+  if(el.cupsHint) el.cupsHint.textContent='Стаканы закрываются…';
+  await wait(430);
+  cups.forEach(c=>c.classList.remove('closed'));
+  if(el.cupsHint) el.cupsHint.textContent='Мешаем…';
+  await shuffleCups(cups);
+  cupsState.busy=false;
+  cups.forEach(c=>c.disabled=false);
+  if(el.cupsHint) el.cupsHint.textContent='Где шарик? Нажми на стакан!';
 }
-function shuffleCups(cups){
-  return new Promise(resolve=>{
-    let swaps=0;
-    const doSwap=()=>{
-      if(swaps>=6){ resolve(); return; }
-      let a=Math.floor(Math.random()*3), b=Math.floor(Math.random()*3);
-      while(b===a) b=Math.floor(Math.random()*3);
-      const sa=cupsState.cupPos[a], sb=cupsState.cupPos[b];
-      cupsState.cupPos[a]=sb; cupsState.cupPos[b]=sa;
-      cups[a].style.left=(sb*(100/3))+'%';
-      cups[b].style.left=(sa*(100/3))+'%';
-      swaps++;
-      setTimeout(doSwap, 170);
-    };
-    doSwap();
-  });
+async function shuffleCups(cups){
+  for(let s=0;s<6;s++){
+    let a=Math.floor(Math.random()*3), b=Math.floor(Math.random()*3);
+    while(b===a) b=Math.floor(Math.random()*3);
+    const sa=cupsState.cupPos[a], sb=cupsState.cupPos[b];
+    cupsState.cupPos[a]=sb; cupsState.cupPos[b]=sa;
+    cups[a].classList.add('lift'); cups[b].classList.add('lift');
+    cups[a].style.left=(sb*(100/3))+'%';
+    cups[b].style.left=(sa*(100/3))+'%';
+    await wait(310);
+    cups[a].classList.remove('lift'); cups[b].classList.remove('lift');
+    await wait(70);
+  }
 }
 function pickCup(cupIndex){
   if(!cupsState.active || cupsState.busy) return;
@@ -1690,7 +1692,7 @@ function seedGifts(){
 }
 let upBet=50, upMult=2, upBusy=false, upSrc='stars', upNftTarget=null, upExtra=0;
 const UP_MULTS=[1.5,2,2.5,3,4,5,6,7,8,9,10];
-const UP_CHANCE={1.5:.647,2:.48,2.5:.38,3:.313,4:.23,5:.18,6:.147,7:.123,8:.105,9:.091,10:.08};
+const UP_CHANCE={1.5:.57,2:.42,2.5:.33,3:.28,4:.20,5:.16,6:.13,7:.11,8:.09,9:.08,10:.07};
 const UP_RING_C=2*Math.PI*82;
 function upNft(){ return state.userNFT? MODEL_CATALOG.find(m=>m.id===state.userNFT):null; }
 function upChanceVal(){

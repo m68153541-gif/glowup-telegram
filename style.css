@@ -1007,3 +1007,12 @@ body.loc2 .screen.active{ background:radial-gradient(120% 80% at 50% 0%, #1b2a4a
 /* ===== «Скоро»: карточки и модели ===== */
 .item-card.soon{ opacity:.62; }
 .item-card.soon .mini-buy, .item-card.soon .mini-3d{ opacity:.75; cursor:not-allowed; }
+
+/* ===== стаканы: анимации ===== */
+.cup{ transition: left .34s cubic-bezier(.2,.8,.2,1), transform .22s ease; }
+.cup.lift{ transform: translateY(-12px); }
+.cup.lift .cup-ico{ filter: drop-shadow(0 12px 16px rgba(0,0,0,.45)); }
+.cup.closed .cup-ico{ animation: cupClose .42s cubic-bezier(.2,.8,.2,1); }
+@keyframes cupClose{ 0%{ transform: translateY(-46px); } 60%{ transform: translateY(6px); } 100%{ transform: translateY(0); } }
+.cup.hit{ animation: cupHit .5s ease; }
+@keyframes cupHit{ 0%,100%{ transform: translateY(0); } 50%{ transform: translateY(-8px); } }
