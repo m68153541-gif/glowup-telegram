@@ -41,7 +41,7 @@ const DEFAULT_STATE = {
 const MODEL_CATALOG = [
   { id:'1', name:'DianaLovis', rarity:'legendary', price:1000, model:'assets/DianaLovis.glb', image:'assets/фон_модели_DianaLovis.png' },
   { id:'2', name:'LerwaxiMi', rarity:'epic',      price:2500, model:'assets/LerwaxiMi.glb', image:'assets/фон_модели_LerwaxiMi.png' },
-  { id:'3', name:'Sweaty',     rarity:'common',   price:900,  model:'assets/Sweaty.glb', image:'assets/фон_модели_Sweaty.png' },
+  { id:'3', name:'Sweaty',     rarity:'common',   price:900,  model:'assets/Sweaty.glb', image:'assets/фон_модели_Sweaty.png', soon:true },
   { id:'4', name:'lilgoga',    rarity:'epic',     price:1500, model:'assets/lilgoga.glb', image:'assets/фон_модели_lilgoga.png' },
   { id:'5', name:'55',         rarity:'epic',     price:1200, model:'assets/model5.glb', image:'assets/фон_модели_55.jpg' },
 ];
@@ -782,13 +782,27 @@ function previewInto(node, modelId, onReady){
 /* =====================================================================
    МАГАЗИН
    ===================================================================== */
+function refundSweaty(){
+  if(state.sweatyRefunded) return;
+  const cnt=(state.owned||[]).filter(x=>x==='3').length;
+  if(cnt>0){
+    state.owned=(state.owned||[]).filter(x=>x!=='3');
+    if(state.userNFT==='3') state.userNFT=null;
+    state.stars += 1000*cnt;
+    toast('Sweaty убрана: возвращено '+(1000*cnt)+' ⭐', true);
+  }
+  state.sweatyRefunded=true;
+  save(); renderBalance(); if(typeof renderNFT==='function') renderNFT();
+}
 function shopCard(m){
   const owned = ownedCount(m.id)>0;
   const d=document.createElement('div');
-  d.className='item-card';
-  const badge = owned
-    ? `<span class="item-badge rarity-${m.rarity}">В коллекции</span>`
-    : `<span class="item-badge rarity-${m.rarity}">${m.rarity==='epic'?'Эпик':'Обычный'}</span>`;
+  d.className='item-card'+(m.soon?' soon':'');
+  const badge = m.soon
+    ? `<span class="item-badge">Скоро</span>`
+    : (owned
+      ? `<span class="item-badge rarity-${m.rarity}">В коллекции</span>`
+      : `<span class="item-badge rarity-${m.rarity}">${m.rarity==='epic'?'Эпик':'Обычный'}</span>`);
   d.innerHTML = `
     <div class="item-media">
       <div class="poster-holder" style="position:absolute;inset:0;z-index:1;width:100%;height:100%"><img class="poster" src="${m.image}" alt="${m.name}" loading="lazy" style="width:100%;height:100%;object-fit:cover"/></div>
@@ -796,10 +810,10 @@ function shopCard(m){
     </div>
     <div class="item-body">
       <div class="item-name">${m.name}</div>
-      <div class="item-price"><span class="ic"></span>${m.price}</div>
+      <div class="item-price"><span class="ic"></span>${m.soon?'—':m.price}</div>
       <div class="item-actions">
-        <button class="mini-buy" data-buy="${m.id}">${owned?'Просмотр':'Купить'}</button>
-        <button class="mini-3d" data-p3d-btn="${m.id}">3D</button>
+        <button class="mini-buy" ${m.soon?'disabled':`data-buy="${m.id}"`}>${m.soon?'Скоро':(owned?'Просмотр':'Купить')}</button>
+        <button class="mini-3d" ${m.soon?'disabled':`data-p3d-btn="${m.id}"`}>3D</button>
       </div>
     </div>`;
   return d;
@@ -2107,6 +2121,7 @@ setInterval(()=>{ if(document.getElementById('screen-cells').classList.contains(
   load(); initTelegram();
   if(!state.firstSeen){ state.firstSeen=Date.now(); save(); }
   seedGifts();
+  refundSweaty();
   renderBalance(); renderLevel(); renderNFT(); renderCells();
   document.body.classList.toggle('loc2', state.loc===2);
   renderLocUI();

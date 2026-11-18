@@ -1003,3 +1003,7 @@ body.loc2 .screen.active{ background:radial-gradient(120% 80% at 50% 0%, #1b2a4a
 /* ===== админ: глобальные действия ===== */
 .admin-global{ margin-top:12px; padding-top:10px; border-top:1px solid rgba(255,255,255,.12); }
 .admin-hint{ font-size:12px; opacity:.72; margin:0 0 8px; text-align:center; line-height:1.35; }
+
+/* ===== «Скоро»: карточки и модели ===== */
+.item-card.soon{ opacity:.62; }
+.item-card.soon .mini-buy, .item-card.soon .mini-3d{ opacity:.75; cursor:not-allowed; }
