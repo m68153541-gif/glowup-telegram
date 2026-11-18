@@ -41,7 +41,7 @@ const DEFAULT_STATE = {
 const MODEL_CATALOG = [
   { id:'1', name:'DianaLovis', rarity:'legendary', price:1000, model:'assets/DianaLovis.glb', image:'assets/фон_модели_DianaLovis.png' },
   { id:'2', name:'LerwaxiMi', rarity:'epic',      price:2500, model:'assets/LerwaxiMi.glb', image:'assets/фон_модели_LerwaxiMi.png' },
-  { id:'3', name:'Sweaty',     rarity:'common',   price:900,  model:'assets/Sweaty.glb', image:'assets/фон_модели_Sweaty.png' },
+  { id:'3', name:'Sweaty',     rarity:'common',   price:900,  model:'assets/sweaty2.glb', image:'assets/фон_модели_Sweaty.png' },
   { id:'4', name:'lilgoga',    rarity:'epic',     price:1500, model:'assets/lilgoga2.glb', image:'assets/фон_модели_lilgoga.png' },
   { id:'5', name:'55',         rarity:'epic',     price:1200, model:'assets/model5.glb', image:'assets/фон_модели_55.jpg' },
 ];
@@ -1379,7 +1379,9 @@ async function startCups(){
   state.stars-=bet; countGame(); save(); renderBalance();
   const cups=cupEls();
   cupsState={ active:true, busy:true, ballCup:Math.floor(Math.random()*3), bet, cupPos:[0,1,2] };
-  cups.forEach((c,i)=>{ c.style.left=(i*(100/3))+'%'; c.className='cup'; c.disabled=true; });
+  const order=[0,1,2].sort(()=>Math.random()-0.5);
+  cups.forEach((c,i)=>{ c.className='cup'; c.disabled=true; c.style.left=(order[i]*(100/3))+'%'; });
+  cupsState.cupPos = order.slice();
   if(el.cupsHint) el.cupsHint.textContent='Шарик под этим стаканом…';
   cups[cupsState.ballCup].classList.add('peek');
   await wait(950);
@@ -1395,16 +1397,17 @@ async function startCups(){
   if(el.cupsHint) el.cupsHint.textContent='Где шарик? Нажми на стакан!';
 }
 async function shuffleCups(cups){
-  for(let s=0;s<6;s++){
+  const total = 5 + Math.floor(Math.random()*4);
+  for(let s=0;s<total;s++){
     let a=Math.floor(Math.random()*3), b=Math.floor(Math.random()*3);
     while(b===a) b=Math.floor(Math.random()*3);
     const sa=cupsState.cupPos[a], sb=cupsState.cupPos[b];
     cupsState.cupPos[a]=sb; cupsState.cupPos[b]=sa;
-    cups[a].classList.add('lift'); cups[b].classList.add('lift');
+    cups[a].classList.add('lift','flip'); cups[b].classList.add('lift','flip','alt');
     cups[a].style.left=(sb*(100/3))+'%';
     cups[b].style.left=(sa*(100/3))+'%';
-    await wait(310);
-    cups[a].classList.remove('lift'); cups[b].classList.remove('lift');
+    await wait(330);
+    cups[a].classList.remove('lift','flip'); cups[b].classList.remove('lift','flip','alt');
     await wait(70);
   }
 }
